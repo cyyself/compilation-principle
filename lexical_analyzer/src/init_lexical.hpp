@@ -18,8 +18,11 @@ std::set <std::string> keys = std::set <std::string> ({
     "if","else","goto","switch",
     "case","do","while","for",
     "continue","break","return",
-    "default","sizeof","true","false",
-    "get","put"
+    "default","sizeof"
+});
+
+std::set <std::string> builtin_functions = std::set <std::string> ({
+    "getchar","putchar","scanf","printf"
 });
 
 std::set <std::string> ops = std::set <std::string> ({

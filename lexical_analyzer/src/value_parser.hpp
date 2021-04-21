@@ -94,6 +94,7 @@ namespace value_parser {
                 offset ++;
             }
             if (ret.type == OCT) {
+                if (offset == 1) ret.type = INT; // 考虑八进制数为0的情况，转为INT方便使用
                 // 考虑八进制数如果出现了别的数字的情况
                 for (int i=1;i<offset;i++) if (str[i] == '8' || str[i] == '9') {
                     ret.type = ERROR_TYPE;

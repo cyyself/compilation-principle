@@ -31,6 +31,10 @@ public:
     bool lexical_exist(string s) {
         return lexical_id.find(s) != lexical_id.end();
     }
+    int get_lexical_number(string s) {
+        if (lexical_exist(s)) return lexical_id[s];
+        else return -1;
+    }
 private:
     vector <string> all_lexical;
     map <string,int> lexical_id;

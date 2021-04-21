@@ -28,10 +28,19 @@ public:
         printf("----- Symbol Table  END  -----\n");
     }
     bool has_struct_or_union(string s) {
-        if (symbol_id.find(s) != symbol_id.end()) {
+        if (has_defined(s)) {
             return (all_symbol[symbol_id[s]].first == "struct" || all_symbol[symbol_id[s]].first == "union");
         }
         else return false;
+    }
+    bool has_defined(string s) {
+        return symbol_id.find(s) != symbol_id.end();
+    }
+    int get_symbol_id(string s) {
+        if (has_defined(s)) {
+            return symbol_id[s];
+        }
+        else return -1;
     }
 private:
     vector <pair <string,string> > all_symbol;//存储类型和名称，方便后续进行判断

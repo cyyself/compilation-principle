@@ -1,7 +1,9 @@
-#define DEBUG
 #include "lexical_parser.hpp"
+
 #define BUFFER_SIZE 128*1024
+
 char buffer[BUFFER_SIZE];
+
 int main() {
     int ptr = -1;
     do {
