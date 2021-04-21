@@ -39,8 +39,8 @@ public:
                 ptr ++;
             }
             else { // 其它字符
-                if (comment_multiline) { // 位于多行注释状态中，直到*/才继续
-                    if (*ptr == '*' && *(ptr+1) == '/') comment_multiline = false;
+                if (comment_multiline || comment_single) { // 位于注释状态中
+                    if (*ptr == '*' && *(ptr+1) == '/') comment_multiline = false; // 处理多行注释结束
                     ptr ++;
                 }
                 else {

@@ -18,7 +18,8 @@ std::set <std::string> keys = std::set <std::string> ({
     "if","else","goto","switch",
     "case","do","while","for",
     "continue","break","return",
-    "default","sizeof","true","false"
+    "default","sizeof","true","false",
+    "get","put"
 });
 
 std::set <std::string> ops = std::set <std::string> ({
@@ -26,7 +27,8 @@ std::set <std::string> ops = std::set <std::string> ({
     "!=","<<",">>","++","--","&&",
     "||","&","|","^","!","~",">=",
     "<=","?",":","=","+=","-=","*=",
-    "/=","<<=",">>=","&=","|=","^="
+    "/=","<<=",">>=","&=","|=","^=",
+    "."
 });
 
 std::set <char> control_ops = std::set<char> ({
