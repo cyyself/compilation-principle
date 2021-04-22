@@ -4,21 +4,22 @@
 
 std::set <std::string> type_qualifiers = std::set <std::string> ({
     "const","static","volatile",
-    "register","inline","extern"
+    "register","inline","extern",
+    "restrict"
 });
 
 std::set <std::string> types = std::set <std::string>({
     "void","int","long","short",
     "float","double","char",
     "unsigned","signed","struct",
-    "union"
+    "union","auto","enum"
 });
 
 std::set <std::string> keys = std::set <std::string> ({
     "if","else","goto","switch",
     "case","do","while","for",
     "continue","break","return",
-    "default","sizeof"
+    "default","sizeof","typedef"
 });
 
 std::set <std::string> builtin_functions = std::set <std::string> ({

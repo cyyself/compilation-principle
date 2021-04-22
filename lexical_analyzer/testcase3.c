@@ -1,11 +1,12 @@
 const extern inline register 
-static volatile char double 
-float int long short 
-signed struct union unsigned 
-void; break case continue 
-default do else for 
-goto if return sizeof 
-switch while getchar printf 
+restrict static volatile auto 
+char double enum float 
+int long short signed 
+struct union unsigned void 
+break case continue default 
+do else for goto 
+if return sizeof switch 
+typedef while getchar printf 
 putchar scanf ! != 
 & && &= * 
 *= + ++ += 
@@ -15,5 +16,6 @@ putchar scanf ! !=
 == > >= >> 
 >>= ? ^ ^= 
 | |= || ~ 
-,   ( ) 
-[ ] { }
+, ; ( ) 
+[ ] { } 
+sym val 
