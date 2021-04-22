@@ -63,8 +63,10 @@ public:
                     }
                     else if (*ptr == '\t' || *ptr == '\r' || *ptr == ' ') { // 保持状态
                         // 保持缩进，方便阅读
+#ifndef NO_SRC_MODE
                         if (*ptr == '\t') printf("\t");
                         else if(*ptr == ' ') printf(" ");
+#endif
                         upd_name_of_type = true;
                         off = 1;
                     }
@@ -74,13 +76,21 @@ public:
                         if (types.find(tmp) != types.end()) { // 识别为类型
                             name_of_type = tmp;
                             upd_name_of_type = true;
+#ifndef NO_SRC_MODE
                             printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
+#else
+                            printf("(%02d,NULL)",lexicals.get_lexical_number(tmp));
+#endif
                         }
                         else {
                             if (name_of_type != "") { // 识别为正在定义符号（注意特殊处理struct和union）
                                 if (name_of_type == "struct" || name_of_type == "union") { // 类型更新为自定义类型
                                     if (symbols.has_defined(tmp)) {
+#ifndef NO_SRC_MODE
                                         printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp),tmp.c_str());
+#else
+                                        printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
+#endif
                                     }
                                     else {
                                         symbol_ready_commit = make_pair(name_of_type,tmp); // 需要等待定义结束再commit
@@ -91,12 +101,20 @@ public:
                                 else {
                                     if (types.find(name_of_type) != types.end() || symbols.has_struct_or_union(name_of_type)) {
                                         int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp);
+#ifndef NO_SRC_MODE
                                         printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),inserted_id,tmp.c_str());
+#else
+                                        printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),inserted_id);
+#endif
                                         last_def_symbol_name = tmp;
                                         upd_name_of_type = true; // 暂时保留类型，处理逗号之后继续定义的情况
                                     }
                                     else {
+#ifndef NO_SRC_MODE
                                         printf("(%02d,?,\"%s\")",lexicals.get_lexical_number("sym"),tmp.c_str());
+#else
+                                        printf("(%02d,?)",lexicals.get_lexical_number("sym"));
+#endif
                                         errors.raise_error(line_number,ptr-linestart,"undefined type \"" + string(tmp) + "\".");
                                     }
                                 }
@@ -104,13 +122,25 @@ public:
                             else {
                                 // 直接翻译为对应词法
                                 if (lexicals.lexical_exist(tmp)) {
+#ifndef NO_SRC_MODE
                                     printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
+#else
+                                    printf("(%02d,NULL)",lexicals.get_lexical_number(tmp));
+#endif
                                 }
                                 else if (symbols.has_defined(tmp)) {
+#ifndef NO_SRC_MODE
                                     printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp),tmp.c_str());
+#else
+                                    printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
+#endif
                                 }
                                 else {
+#ifndef NO_SRC_MODE
                                     printf("(?,?,\"%s\")",tmp.c_str());
+#else
+                                    printf("(?,?)");
+#endif
                                     errors.raise_error(line_number,ptr-linestart,string("undefined symbol \"") + tmp + string("\"."));
                                 }
                             }
@@ -181,9 +211,10 @@ public:
                                     br_square = 0;
                                 }
                             }
+#ifndef NO_SRC_MODE
                             printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
-#ifdef DEBUG
-                            cout << tmp << "\n";
+#else
+                            printf("(%02d,NULL)",lexicals.get_lexical_number(tmp));
 #endif
                         }
                     }
@@ -196,7 +227,11 @@ public:
                             upd_name_of_type = true;
                         }
                         int inserted_id = values.insert(string(output_value_type(res.type)),tmp);
+#ifndef NO_SRC_MODE
                         printf("(%02d,%03d,%s)",lexicals.get_lexical_number("val"),inserted_id,tmp.c_str());
+#else
+                        printf("(%02d,%03d)",lexicals.get_lexical_number("val"),inserted_id);
+#endif
 #ifdef DEBUG
                         cout << genstring(ptr,off) << "\t" << string(output_value_type(res.type)) << "\n";
 #endif
