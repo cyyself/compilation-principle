@@ -11,6 +11,7 @@ int main() {
         buffer[ptr] = getchar();
     }
     while (buffer[ptr] != EOF);
+    buffer[ptr] = 0; // replace EOF to 0
     // const char *buffer = "struct c {int a;};int a = 1;int b = 2;struct c d;char *e = \"abcd\"";
     lexical_parser parser;
     parser.parse_lexical(buffer);
