@@ -234,7 +234,7 @@ public:
 #endif
                         }
                     }
-                    else if (isnumber(*ptr) || *ptr == '"' || *ptr == '\'') { // 识别数值
+                    else if (isdigit(*ptr) || *ptr == '"' || *ptr == '\'') { // 识别数值
                         value_result res;
                         off = parse_value(ptr,res);
                         string tmp = genstring(ptr,off);
