@@ -71,7 +71,7 @@ public:
                         upd_name_of_type = true;
                         off = 1;
                     }
-                    else if (isalpha(*ptr) || *ptr == '_') { // 识别运算符
+                    else if (isalpha(*ptr) || *ptr == '_') { // 识别标识符
                         off = read_keyword(ptr);
                         string tmp = genstring(ptr,off);
                         if (types.find(tmp) != types.end()) { // 识别为类型
@@ -160,7 +160,7 @@ public:
                         cout << tmp << "\n";
 #endif
                     }
-                    else if (trie.firstExist(*ptr)) { // 识别符号
+                    else if (trie.firstExist(*ptr)) { // 识别运算符
                         off = trie.query(ptr);
                         string tmp = genstring(ptr,off);
                         if (off == 0) {
