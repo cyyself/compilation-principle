@@ -19,6 +19,10 @@ public:
             return lexical_id[s];
         }
     }
+    void post_init() {
+        insert("sym");
+        insert("val");
+    }
     void print_all() {
         printf("----- Lexical Table BEGIN -----\n");
         for (int i=0;i<all_lexical.size();i+=4) {

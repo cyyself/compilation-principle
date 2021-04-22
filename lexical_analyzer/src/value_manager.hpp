@@ -20,13 +20,13 @@ public:
         }
     }
     void print_all() {
-        printf("----- Value Table BEGIN -----\n");
-        printf("|No.|  Type  | Symbol \n");
-        printf("-----------------------\n");
+        printf("----- Const Table BEGIN -----\n");
+        printf("|No.|  Type  | Value \n");
+        printf("-----------------------------\n");
         for (int i=0;i<all_value.size();i++) {
             printf("|%03d|%*s|%s\n",i,8,all_value[i].first.c_str(),all_value[i].second.c_str());
         }
-        printf("----- Value Table  END  -----\n");
+        printf("----- Const Table  END  -----\n");
     }
 private:
     vector <pair<string,string> > all_value;

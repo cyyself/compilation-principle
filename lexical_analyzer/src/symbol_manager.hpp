@@ -20,10 +20,10 @@ public:
     }
     void print_all() {
         printf("----- Symbol Table BEGIN -----\n");
-        printf("|No.|  Type  | Symbol |\n");
-        printf("-----------------------\n");
+        printf("|No.|     Type     | Symbol \n");
+        printf("------------------------------\n");
         for (int i=0;i<all_symbol.size();i++) {
-            printf("|%03d|%*s|%*s|\n",i,8,all_symbol[i].first.c_str(),8,all_symbol[i].second.c_str());
+            printf("|%03d|%*s|%s\n",i,14,all_symbol[i].first.c_str(),all_symbol[i].second.c_str());
         }
         printf("----- Symbol Table  END  -----\n");
     }
@@ -41,6 +41,13 @@ public:
             return symbol_id[s];
         }
         else return -1;
+    }
+    bool append_type(string s,string typetoappend) { // 用于给已有symbol的类型添加属性
+        if (!has_defined(s)) return false;
+        else {
+            all_symbol[symbol_id[s]].first += typetoappend;
+            return true;
+        }
     }
 private:
     vector <pair <string,string> > all_symbol;//存储类型和名称，方便后续进行判断
