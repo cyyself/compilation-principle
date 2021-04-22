@@ -7,6 +7,7 @@ using std::cerr;
 using std::vector;
 using std::string;
 using std::tuple;
+using std::tie;
 
 class error_manager {
 public:
