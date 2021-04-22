@@ -44,6 +44,7 @@ public:
         }
     }
     void init_lines(const char *ptr) {
+        const char *ptr_start = ptr;
         string buf;
         while (*ptr && *ptr != EOF) {
             if (*ptr != '\r') {
@@ -58,8 +59,16 @@ public:
             ptr ++;
         }
         if (buf != "") lines.push_back(buf);
+        filesize = ptr - ptr_start;
+    }
+    int getlines() {
+        return lines.size();
+    }
+    int getfilesize() {
+        return filesize;
     }
 private:
     vector<tuple<int,int,string> > errors;
     vector<string> lines;
+    int filesize = 0;
 };

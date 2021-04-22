@@ -76,6 +76,7 @@ public:
                         if (types.find(tmp) != types.end()) { // 识别为类型
                             name_of_type = tmp;
                             upd_name_of_type = true;
+                            lexicals.add_count(lexicals.get_lexical_number(tmp));
 #ifndef NO_SRC_MODE
                             printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
 #else
@@ -86,6 +87,7 @@ public:
                             if (name_of_type != "") { // 识别为正在定义符号（注意特殊处理struct和union）
                                 if (name_of_type == "struct" || name_of_type == "union") { // 类型更新为自定义类型
                                     if (symbols.has_defined(tmp)) {
+                                        lexicals.add_count(lexicals.get_lexical_number("sym"));
 #ifndef NO_SRC_MODE
                                         printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp),tmp.c_str());
 #else
@@ -103,6 +105,7 @@ public:
                                         if (lexicals.lexical_exist(tmp)) errors.raise_error(line_number,ptr-linestart,"symbol already defined in the lexicals.");
                                         else {
                                             int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp);
+                                            lexicals.add_count(lexicals.get_lexical_number("sym"));
 #ifndef NO_SRC_MODE
                                             printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),inserted_id,tmp.c_str());
 #else
@@ -114,6 +117,7 @@ public:
 
                                     }
                                     else {
+                                        lexicals.add_count(lexicals.get_lexical_number("sym"));
 #ifndef NO_SRC_MODE
                                         printf("(%02d,?,\"%s\")",lexicals.get_lexical_number("sym"),tmp.c_str());
 #else
@@ -126,6 +130,7 @@ public:
                             else {
                                 // 直接翻译为对应词法
                                 if (lexicals.lexical_exist(tmp)) {
+                                    lexicals.add_count(lexicals.get_lexical_number(tmp));
 #ifndef NO_SRC_MODE
                                     printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
 #else
@@ -133,6 +138,7 @@ public:
 #endif
                                 }
                                 else if (symbols.has_defined(tmp)) {
+                                    lexicals.add_count(lexicals.get_lexical_number("sym"));
 #ifndef NO_SRC_MODE
                                     printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp),tmp.c_str());
 #else
@@ -187,6 +193,7 @@ public:
                                     if (lexicals.lexical_exist(symbol_ready_commit.second)) errors.raise_error(line_number,ptr-linestart,"symbol already defined in the lexicals.");
                                     else {
                                         int inserted_id = symbols.insert(symbol_ready_commit.first,symbol_ready_commit.second);
+                                        lexicals.add_count(lexicals.get_lexical_number("sym"));
                                         printf("(%02d,%03d,%s)",lexicals.get_lexical_number("sym"),inserted_id,symbol_ready_commit.second.c_str());
                                     }
                                     symbol_ready_commit = make_pair(string(""),string(""));
@@ -218,6 +225,7 @@ public:
                                     br_square = 0;
                                 }
                             }
+                            lexicals.add_count(lexicals.get_lexical_number(tmp));
 #ifndef NO_SRC_MODE
                             printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
 #else
@@ -234,6 +242,7 @@ public:
                             upd_name_of_type = true;
                         }
                         int inserted_id = values.insert(string(output_value_type(res.type)),tmp);
+                        lexicals.add_count(lexicals.get_lexical_number("val"));
 #ifndef NO_SRC_MODE
                         printf("(%02d,%03d,%s)",lexicals.get_lexical_number("val"),inserted_id,tmp.c_str());
 #else
@@ -263,6 +272,10 @@ public:
         if (br_curly != 0) errors.raise_error(last_curly_line,last_curly_col,"Bracket didn't match when source code ends.");
     }
     void print_result() {
+        printf("\n\n");
+        printf("count(line) = %d, count(char) = %d\n",errors.getlines(),errors.getfilesize());
+        lexicals.print_statistic();
+        printf("\n");
         errors.print_err();
         printf("\n");
         lexicals.print_all();

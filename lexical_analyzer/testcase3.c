@@ -18,4 +18,3 @@ putchar scanf ! !=
 | |= || ~ 
 , ; ( ) 
 [ ] { } 
-sym val 
