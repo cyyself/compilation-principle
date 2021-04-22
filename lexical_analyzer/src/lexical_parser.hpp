@@ -253,7 +253,7 @@ public:
                         cout << genstring(ptr,off) << "\t" << string(output_value_type(res.type)) << "\n";
 #endif
                     }
-                    else {
+                    else { // 不匹配任何字符，抛出异常
                         errors.raise_error(line_number,ptr-linestart,"unknow character, skipped.");
 #ifdef DEBUG
                         printf("error byte=%d\n",(int)*ptr);
@@ -264,7 +264,7 @@ public:
                     ptr += off;
                 }
             }
-            if (!upd_name_of_type) {
+            if (!upd_name_of_type) { // 处理类型数据保持
                 name_of_type = "";
                 last_def_symbol_name = "";
                 symbol_ready_commit = make_pair(string(""),string(""));
