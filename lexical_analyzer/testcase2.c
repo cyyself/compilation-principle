@@ -11,8 +11,9 @@ int add(int a,int b) {
 */
 
 int main() {
+    int continue;
     const char *s = "Hello world!";
-    int i = 0;$
+    int i = 0;$ 
     while (s[i])
         putchar(s[i++]));
     struct DATA c;

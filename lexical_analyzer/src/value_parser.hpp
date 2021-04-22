@@ -47,11 +47,11 @@ namespace value_parser {
         else if (str[0] == '"') { // 检测到字符串
             offset ++;
             bool last_zy = false;
-            while (str[offset] != EOF && (last_zy || str[offset] != '"')) {
+            while (str[offset] && str[offset] != EOF && (last_zy || str[offset] != '"')) {
                 last_zy = (str[offset] == '\\'); // 考虑转义符，例如\"不应该认为是字符串结束
                 offset ++;
             }
-            if (str[offset] == EOF) {
+            if (str[offset] == EOF || str[offset] == 0) {
                 ret.type = ERROR_TYPE;
             }
             else {
@@ -65,7 +65,7 @@ namespace value_parser {
             ret.type = INT;
             bool neg = str[0] == '-';
             if (neg) offset ++;
-            while (str[offset] != EOF) {
+            while (str[offset] && str[offset] != EOF) {
                 if (str[offset] == '-') {
                     if (str[offset-1] != 'e') break;
                 }

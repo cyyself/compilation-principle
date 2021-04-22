@@ -32,7 +32,7 @@ public:
         int last_curly_line = -1, last_curly_col = -1; // 输出大括号匹配错误信息
         pair <string,string> symbol_ready_commit; // 用于识别结构体和联合体定义，需要等待识别到对应的定义字符才提交更改
         int ptr_level = 0; // 用于识别多级指针
-        while (*ptr != EOF) {
+        while (*ptr && *ptr != EOF) {
             bool upd_name_of_type = false; // 处理上次类型是否更新，如果未更新则在最后清空name of type
             if (*ptr == '\n') { // 处理换行
                 printf("\n");
@@ -100,14 +100,18 @@ public:
                                 }
                                 else {
                                     if (types.find(name_of_type) != types.end() || symbols.has_struct_or_union(name_of_type)) {
-                                        int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp);
+                                        if (lexicals.lexical_exist(tmp)) errors.raise_error(line_number,ptr-linestart,"symbol already defined in the lexicals.");
+                                        else {
+                                            int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp);
 #ifndef NO_SRC_MODE
-                                        printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),inserted_id,tmp.c_str());
+                                            printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),inserted_id,tmp.c_str());
 #else
-                                        printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),inserted_id);
+                                            printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),inserted_id);
 #endif
-                                        last_def_symbol_name = tmp;
-                                        upd_name_of_type = true; // 暂时保留类型，处理逗号之后继续定义的情况
+                                            last_def_symbol_name = tmp;
+                                            upd_name_of_type = true; // 暂时保留类型，处理逗号之后继续定义的情况
+                                        }
+
                                     }
                                     else {
 #ifndef NO_SRC_MODE
@@ -180,8 +184,11 @@ public:
                             else if (tmp == "{") {
                                 br_curly ++;
                                 if (symbol_ready_commit != make_pair(string(""),string(""))) {
-                                    int inserted_id = symbols.insert(symbol_ready_commit.first,symbol_ready_commit.second);
-                                    printf("(%02d,%03d,%s)",lexicals.get_lexical_number("sym"),inserted_id,symbol_ready_commit.second.c_str());
+                                    if (lexicals.lexical_exist(symbol_ready_commit.second)) errors.raise_error(line_number,ptr-linestart,"symbol already defined in the lexicals.");
+                                    else {
+                                        int inserted_id = symbols.insert(symbol_ready_commit.first,symbol_ready_commit.second);
+                                        printf("(%02d,%03d,%s)",lexicals.get_lexical_number("sym"),inserted_id,symbol_ready_commit.second.c_str());
+                                    }
                                     symbol_ready_commit = make_pair(string(""),string(""));
                                 }
                                 last_curly_line = line_number;

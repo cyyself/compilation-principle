@@ -45,7 +45,7 @@ public:
     }
     void init_lines(const char *ptr) {
         string buf;
-        while (*ptr) {
+        while (*ptr && *ptr != EOF) {
             if (*ptr != '\r') {
                 if (*ptr == '\n') {
                     lines.push_back(buf);
