@@ -15,7 +15,7 @@ namespace value_parser {
         "error_type",
         "int",
         "float",
-        "string",
+        "char[]",
         "oct",
         "hex",
         "char"
