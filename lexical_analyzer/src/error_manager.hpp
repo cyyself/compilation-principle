@@ -14,14 +14,6 @@ class error_manager {
 public:
     void raise_error(int line,int col,string msg) {
         errors.push_back(tie(line,col,msg));
-#ifdef DEBUG
-        cerr << "\nerror: line " << line << ", col " << col << ", " << msg << "\n";
-        if (line-1 < lines.size()) {
-            cerr << lines[line-1] << "\n";
-            for (int i=1;i<col;i++) cerr << " ";
-            cerr << "^\n";
-        }
-#endif
     }
     void print_err() {
         for (auto cur : errors) {
@@ -41,7 +33,7 @@ public:
                     }
                     if (i != col-1) cerr << " ";
                 }
-                cerr << "^\n";
+                cerr << "\033[0;32m^\033[0m\n";
             }
         }
     }
