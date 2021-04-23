@@ -406,6 +406,23 @@ struct result process(struct input *a,struct input *b) {
 
 都可以被我们的文法定义所涵盖识别。
 
+### 数组的定义
+
+数组的定义采用的是在检测到变量后存在数组声明的数字以后对类型进行更新的方法，具体代码位于`lexical_parser.hpp:242-245`，如下：
+
+```cpp
+else if (isdigit(*ptr) || *ptr == '"' || *ptr == '\'') { // 识别数值
+  value_result res;
+  off = parse_value(ptr,res);
+  string tmp = genstring(ptr,off);
+  if ((res.type == INT || res.type == HEX || res.type == OCT) && last_def_symbol_name != "") {
+    symbols.append_type(last_def_symbol_name,string("[") + tmp + string("]"));
+    upd_name_of_type = true;
+  }
+  // 其它关于数值识别的操作
+}
+```
+
 ### 代码
 
 结合以上定义，我们可以同时考虑处理定义时的状态转移，编写C++代码如下：
