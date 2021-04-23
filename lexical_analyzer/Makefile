@@ -11,10 +11,10 @@ test2: lexical_analyzer testcase2.c
 	@./lexical_analyzer < testcase2.c
 
 test3: lexical_analyzer testcase3.c
-	@echo "Testing Testcase2.c"
+	@echo "Testing Testcase3.c"
 	@./lexical_analyzer < testcase3.c
 
-test: lexical_analyzer testcase1.c testcase2.c
+test: lexical_analyzer testcase1.c testcase2.c testcase3.c
 	@echo "Testing Testcase1.c"
 	@./lexical_analyzer < testcase1.c
 	@echo "Testing Testcase2.c"
