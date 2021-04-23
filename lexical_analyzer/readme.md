@@ -121,93 +121,93 @@
 
     ```cpp
     enum value_type {
-        ERROR_TYPE,INT,FLOAT,STR,OCT,HEX,CHAR
+      ERROR_TYPE,INT,FLOAT,STR,OCT,HEX,CHAR
     };
     struct value_result {
-        value_type type;
-        const char *value;
-        int valuelen;
+      value_type type;
+      const char *value;
+      int valuelen;
     };
     int parse_value(const char *str,value_result &ret) {
-        ret.type = ERROR_TYPE;
-        ret.value = str;
-        int &offset = ret.valuelen = 0;
-        if (str[0] == '\'') { // 检测到字符常量
-            ret.type = CHAR;
-            if (str[2] == '\'') { // 考虑'a'的形式
-                offset = 3;
-            }
-            else {
-                if (str[1] == '\\' && str[3] == '\'') { //考虑'/a'的形式
-                    offset = 4;
-                }
-                else {
-                    ret.type = ERROR_TYPE;
-                }
-            }
-            return offset;
-        }
-        else if (str[0] == '"') { // 检测到字符串（字符数组）常量
-            offset ++;
-            bool last_zy = false;
-            while (str[offset] && str[offset] != EOF && (last_zy || str[offset] != '"')) {
-                last_zy = (str[offset] == '\\'); // 考虑转义符，例如\"不应该认为是字符串结束
-                offset ++;
-            }
-            if (str[offset] == EOF || str[offset] == 0) { // 处理读取到终点，防止缓冲区溢出
-                ret.type = ERROR_TYPE;
-            }
-            else {
-                offset ++;
-                ret.type = STR;
-                ret.valuelen = offset;
-            }
-            return offset;
-        }
-        else if (isdigit(str[0]) || str[0] == '-') {// 检测到数值常量
-            ret.type = INT;
-            bool neg = str[0] == '-';
-            if (neg) offset ++;
-            while (str[offset] && str[offset] != EOF) {
-                if (str[offset] == '-') { //根据特殊定位符处理数值类型
-                    if (str[offset-1] != 'e') break;
-                }
-                else if (str[offset] == '.') {
-                    ret.type = FLOAT;
-                }
-                else if (str[offset] == 'e') {
-                    ret.type = FLOAT;
-                }
-                else if (str[offset] == '0' && offset == neg) {
-                    ret.type = OCT;
-                }
-                else if (str[offset] == 'x') {
-                    ret.type = HEX;
-                }
-                else if (!isdigit(str[offset])) {
-                    // 如果不是16进制还出现了其它字符，那么就认为可能是到达了边界，直接停止
-                    if (!(ret.type == HEX && 
-                        (
-                            (str[offset] >= 'a' && str[offset] <= 'f') || 
-                            (str[offset] >= 'A' && str[offset] <= 'F'))
-                        )
-                    ) {
-                        break;
-                    }
-                }
-                offset ++;
-            }
-            if (ret.type == OCT) {
-                // 考虑八进制数如果出现了别的数字的情况
-                for (int i=1;i<offset;i++) if (str[i] == '8' || str[i] == '9') {
-                    ret.type = ERROR_TYPE;
-                }
-            }
-            return offset;
+      ret.type = ERROR_TYPE;
+      ret.value = str;
+      int &offset = ret.valuelen = 0;
+      if (str[0] == '\'') { // 检测到字符常量
+        ret.type = CHAR;
+        if (str[2] == '\'') { // 考虑'a'的形式
+          offset = 3;
         }
         else {
-            return 1; // 不可能出现这种情况，但还是返回一个值来跳过这里
+          if (str[1] == '\\' && str[3] == '\'') { //考虑'/a'的形式
+            offset = 4;
+          }
+          else {
+            ret.type = ERROR_TYPE;
+          }
         }
+        return offset;
+      }
+      else if (str[0] == '"') { // 检测到字符串（字符数组）常量
+        offset ++;
+        bool last_zy = false;
+        while (str[offset] && str[offset] != EOF && (last_zy || str[offset] != '"')) {
+          last_zy = (str[offset] == '\\'); // 考虑转义符，例如\"不应该认为是字符串结束
+          offset ++;
+        }
+        if (str[offset] == EOF || str[offset] == 0) { // 处理读取到终点，防止缓冲区溢出
+          ret.type = ERROR_TYPE;
+        }
+        else {
+          offset ++;
+          ret.type = STR;
+          ret.valuelen = offset;
+        }
+        return offset;
+      }
+      else if (isdigit(str[0]) || str[0] == '-') {// 检测到数值常量
+        ret.type = INT;
+        bool neg = str[0] == '-';
+        if (neg) offset ++;
+        while (str[offset] && str[offset] != EOF) {
+          if (str[offset] == '-') { //根据特殊定位符处理数值类型
+            if (str[offset-1] != 'e') break;
+          }
+          else if (str[offset] == '.') {
+            ret.type = FLOAT;
+          }
+          else if (str[offset] == 'e') {
+            ret.type = FLOAT;
+          }
+          else if (str[offset] == '0' && offset == neg) {
+            ret.type = OCT;
+          }
+          else if (str[offset] == 'x') {
+            ret.type = HEX;
+          }
+          else if (!isdigit(str[offset])) {
+            // 如果不是16进制还出现了其它字符，那么就认为可能是到达了边界，直接停止
+            if (!(ret.type == HEX && 
+                  (
+                    (str[offset] >= 'a' && str[offset] <= 'f') || 
+                    (str[offset] >= 'A' && str[offset] <= 'F'))
+                 )
+               ) {
+              break;
+            }
+          }
+          offset ++;
+        }
+        if (ret.type == OCT) {
+          // 考虑八进制数如果出现了别的数字的情况
+          for (int i=1;i<offset;i++) if (str[i] == '8' || str[i] == '9') {
+            ret.type = ERROR_TYPE;
+          }
+        }
+        return offset;
+      }
+      else {
+        return 1; // 不可能出现这种情况，但还是返回一个值来跳过这里
+      }
     }
     ```
 
@@ -252,22 +252,20 @@
   }
   ```
 
-  
-
   这里我定义的运算符列表如下：
 
   ```cpp
   std::set <std::string> ops = std::set <std::string> ({
-      "+","-","*","/","<",">","==",
-      "!=","<<",">>","++","--","&&",
-      "||","&","|","^","!","~",">=",
-      "<=","?",":","=","+=","-=","*=",
-      "/=","<<=",">>=","&=","|=","^=",
-      "."
+    "+","-","*","/","<",">","==",
+    "!=","<<",">>","++","--","&&",
+    "||","&","|","^","!","~",">=",
+    "<=","?",":","=","+=","-=","*=",
+    "/=","<<=",">>=","&=","|=","^=",
+    "."
   });
   ```
 
-  基于以上文法表示，我们就可以将代码中需要提取的内容提取出来。
+  基于以上文法表示，我们就可以将代码中需要提取的运算符提取出来。
 
 ### 注释
 
@@ -288,6 +286,8 @@
   同样可以采用以下FSM表示：
 
   ![multiple_line_comment](img/multiple_line_comment.png)
+
+此外，还要考虑到用户定义符号，如**变量声明**、**函数声明**、**结构体与联合体的声明**，这一部分将在符号表进行介绍。
 
 ## 3. 词类编码表
 
@@ -323,34 +323,34 @@
 
 ```cpp
 std::set <std::string> type_qualifiers = std::set <std::string> ({
-    "const","static","volatile","register","inline","extern",
-    "restrict"
+  "const","static","volatile","register","inline","extern",
+  "restrict"
 });
 std::set <std::string> types = std::set <std::string>({
-    "void","int","long","short","float","double","char",
-    "unsigned","signed","struct","union","auto","enum"
+  "void","int","long","short","float","double","char",
+  "unsigned","signed","struct","union","auto","enum"
 });
 std::set <std::string> keys = std::set <std::string> ({
-    "if","else","goto","switch","case","do","while","for",
-    "continue","break","return","default","sizeof","typedef"
+  "if","else","goto","switch","case","do","while","for",
+  "continue","break","return","default","sizeof","typedef"
 });
 std::set <std::string> builtin_functions = std::set <std::string> ({
-    "getchar","putchar","scanf","printf"
+  "getchar","putchar","scanf","printf"
 });
 std::set <std::string> ops = std::set <std::string> ({
-    "+","-","*","/","<",">","==","!=","<<",">>","++","--","&&",
-    "||","&","|","^","!","~",">=","<=","?",":","=","+=","-=","*=",
-    "/=","<<=",">>=","&=","|=","^=","."
+  "+","-","*","/","<",">","==","!=","<<",">>","++","--","&&",
+  "||","&","|","^","!","~",">=","<=","?",":","=","+=","-=","*=",
+  "/=","<<=",">>=","&=","|=","^=","."
 });
 std::set <char> control_ops = std::set<char> ({
-    ',',';'
+  ',',';'
 });
 std::set<std::pair<char,char> > control_ops_pairwise = 
-    std::set<std::pair<char,char> >({
-        {'{','}'},
-        {'(',')'},
-        {'[',']'}
-    });
+  std::set<std::pair<char,char> >({
+    {'{','}'},
+    {'(',')'},
+    {'[',']'}
+  });
 ```
 
 ## 4. 符号表
@@ -417,62 +417,63 @@ struct result process(struct input *a,struct input *b) {
 // pair <string,string> symbol_ready_commit 用于处理结构体和联合体的延迟加入符号表
 // string last_def_symbol_name 上次读取到的用于定义的符号名称，用于处理函数的定义加入符号表
 if (isalpha(*ptr) || *ptr == '_') { // 识别标识符
-    off = read_keyword(ptr); // 递归下降，读取标识符，返回对应标识符的长度
-    string tmp = genstring(ptr,off); // 获取标识符，转换为字符串
-    if (types.find(tmp) != types.end()) { // 如果当前读取的标识符识别为类型
-        name_of_type = tmp; // 更新name_of_type变量，用于后续对函数定义以及
-        upd_name_of_type = true; // 设置一个bool变量表名这次更新了name_of_type，在最后不对它进行清空
-        lexicals.add_count(lexicals.get_lexical_number(tmp)); // 对于该symbol的统计++，用于最后打印统计结果
-        printf("(%02d,NULL)",lexicals.get_lexical_number(tmp)); // 输出该符号二元组
-    }
-    else {
-        if (name_of_type != "") { // 识别为正在定义符号（注意特殊处理struct和union）
-            if (name_of_type == "struct" || name_of_type == "union") { // 类型更新为自定义类型
-                if (symbols.has_defined(tmp)) { // 如果是一个已经被定义的struct或者union，那么就认为是正在使用该struct或者union的名称
-                    lexicals.add_count(lexicals.get_lexical_number("sym"));
-                    printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
-                }
-                else { // 这种情况下说明正在定义struct或者union，需要等待识别到大括号{以后再加入符号表
-                    symbol_ready_commit = make_pair(name_of_type,tmp); 
-                }
-                name_of_type = tmp;
-                upd_name_of_type = true;
-            }
-            else {
-                if (types.find(name_of_type) != types.end() || symbols.has_struct_or_union(name_of_type)) { // 检测该类型是否已经定义
-                    if (lexicals.lexical_exist(tmp)) errors.raise_error(line_number,ptr-linestart,"symbol already defined in the lexicals."); // 检测正在定义的符号是否与先前定义的符号存在冲突
-                    else {
-                        int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp); // 插入符号表
-                        lexicals.add_count(lexicals.get_lexical_number("sym"));
-                        printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),inserted_id);
-                        last_def_symbol_name = tmp;
-                        upd_name_of_type = true; // 暂时保留类型，处理逗号之后继续定义的情况
-                    }
+  off = read_keyword(ptr); // 递归下降，读取标识符，返回对应标识符的长度
+  string tmp = genstring(ptr,off); // 获取标识符，转换为字符串
+  if (types.find(tmp) != types.end()) { // 如果当前读取的标识符识别为类型
+    name_of_type = tmp; // 更新name_of_type变量，用于后续对函数定义以及
+    upd_name_of_type = true; // 设置一个bool变量表名这次更新了name_of_type，在最后不对它进行清空
+    lexicals.add_count(lexicals.get_lexical_number(tmp)); // 对于该symbol的统计++，用于最后打印统计结果
+    printf("(%02d,NULL)",lexicals.get_lexical_number(tmp)); // 输出该符号二元组
+  }
+  else {
+    if (name_of_type != "") { // 识别为正在定义符号（注意特殊处理struct和union）
+      if (name_of_type == "struct" || name_of_type == "union") { // 类型更新为自定义类型
+        if (symbols.has_defined(tmp)) { // 如果是一个已经被定义的struct或者union，那么就认为是正在使用该struct或者union的名称
+          lexicals.add_count(lexicals.get_lexical_number("sym"));
+          printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
+        }
+        else { // 这种情况下说明正在定义struct或者union，需要等待识别到大括号{以后再加入符号表
+          symbol_ready_commit = make_pair(name_of_type,tmp); 
+        }
+        name_of_type = tmp;
+        upd_name_of_type = true;
+      }
+      else {
+        if (types.find(name_of_type) != types.end() || symbols.has_struct_or_union(name_of_type)) { // 检测该类型是否已经定义
+          if (lexicals.lexical_exist(tmp)) errors.raise_error(line_number,ptr-linestart,"symbol already defined in the lexicals."); // 检测正在定义的符号是否与先前定义的符号存在冲突
+          else if (symbols.has_defined(tmp)) errors.raise_error(line_number,ptr-linestart,"symbol already defined");
+          else {
+            int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp); // 插入符号表
+            lexicals.add_count(lexicals.get_lexical_number("sym"));
+            printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),inserted_id);
+            last_def_symbol_name = tmp;
+            upd_name_of_type = true; // 暂时保留类型，处理逗号之后继续定义的情况
+          }
 
-                }
-                else {
-                    lexicals.add_count(lexicals.get_lexical_number("sym"));
-                    printf("(%02d,?)",lexicals.get_lexical_number("sym"));
-                    errors.raise_error(line_number,ptr-linestart,"undefined type \"" + string(tmp) + "\"."); // 检测到没有定义的类型
-                }
-            }
         }
         else {
-            // 直接翻译为对应词法
-            if (lexicals.lexical_exist(tmp)) {
-                lexicals.add_count(lexicals.get_lexical_number(tmp));
-                printf("(%02d,NULL)",lexicals.get_lexical_number(tmp));
-            }
-            else if (symbols.has_defined(tmp)) {
-                lexicals.add_count(lexicals.get_lexical_number("sym"));
-                printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
-            }
-            else {
-                printf("(?,?)");
-                errors.raise_error(line_number,ptr-linestart,string("undefined symbol \"") + tmp + string("\"."));
-            }
+          lexicals.add_count(lexicals.get_lexical_number("sym"));
+          printf("(%02d,?)",lexicals.get_lexical_number("sym"));
+          errors.raise_error(line_number,ptr-linestart,"undefined type \"" + string(tmp) + "\"."); // 检测到没有定义的类型
         }
+      }
     }
+    else {
+      // 直接翻译为对应词法
+      if (lexicals.lexical_exist(tmp)) {
+        lexicals.add_count(lexicals.get_lexical_number(tmp));
+        printf("(%02d,NULL)",lexicals.get_lexical_number(tmp));
+      }
+      else if (symbols.has_defined(tmp)) {
+        lexicals.add_count(lexicals.get_lexical_number("sym"));
+        printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
+      }
+      else {
+        printf("(?,?)");
+        errors.raise_error(line_number,ptr-linestart,string("undefined symbol \"") + tmp + string("\"."));
+      }
+    }
+  }
 }
 ```
 
@@ -518,6 +519,116 @@ if (isalpha(*ptr) || *ptr == '_') { // 识别标识符
 
 可以看到，这里正确处理了结构体、数组、函数的识别。
 
-## 5. 错误处理
+## 5. 常量表
 
-未完待续
+常量的具体识别方式已经在第二部分语言说明的三类词法中进行描述并展示了关键代码，这里继续展示如何对常量进行管理。
+
+位于我代码的`src/value_manager.hpp`文件编写了一个常量管理器，它的操作非常简单，就是以字符串形式插入常量以及记录常量的类型以及id号，以便事后用到的时候进行查询以及最后的打印。
+
+同时，我做了一个简单的优化：
+
+如果两个常量定义的字符串相同，那么插入的时候会直接进行匹配，直接重复使用对应的ID号，这样在后续编译的时候可以节省程序所需的空间。
+
+常量管理器如下：
+
+```cpp
+class value_manager { // 用于管理所有出现的值
+  public:
+  int insert(string type, string value) {
+    if (value_id.find(value) != value_id.end()) return value_id[value]; // 前面提到的优化
+    else {
+      value_id[value] = all_value.size();
+      all_value.push_back(make_pair(type,value));
+      return value_id[value];
+    }
+  }
+  void print_all() {
+    printf("----- Const Table BEGIN -----\n");
+    printf("|No.|  Type  | Value \n");
+    printf("-----------------------------\n");
+    for (int i=0;i<all_value.size();i++) {
+      printf("|%03d|%*s|%s\n",i,8,all_value[i].first.c_str(),all_value[i].second.c_str());
+    }
+    printf("----- Const Table  END  -----\n");
+  }
+  private:
+  vector <pair<string,string> > all_value;
+  map <string,int> value_id; // 对于value，value一定能对应到type以及id，因此这里只存储value
+};
+```
+
+最后，以我的`testcase1.c`为例，打印出来的常量如下：
+
+![const table](img/const table.png)
+
+## 6. 错误处理
+
+对于词法错误处理，我的程序实现了在发现错误之后记录错误，然后对现有状态进行恢复。
+
+而在词法分析中，错误处理的恢复非常简单，分为以下两种问题：
+
+1. 正在定义变量、函数、结构体：清空已有的类型状态信息
+2. 括号不匹配时，且右括号比左括号多：将统计清零，重新开始统计，如果只有这一个右括号是多打的即可不影响后续处理。
+
+我实现了以下词法错误的识别（记录了对应程序源代码位置以及行号）：
+
+1. 正在定义的Symbol与内置词法冲突。`src/lexical_parser.hpp:106`
+2. 正在定义的Symbol已经被定义过。`src/lexical_parser.hpp:107,src/lexical_parser.hpp:195`
+3. 识别为正在定义结构体或联合体变量，但是之前该结构体或联合体没有被声明。`src/lexical_parser.hpp:123`
+4. 正在使用某个Symbol，但之前没有被使用。`src/lexical_parser.hpp:157`
+5. 检测到运算符，但无法与任何已知运算符匹配上。`src/lexical_parser.hpp:169`
+6. 括号不匹配：
+   1. `()`不匹配：
+      - 中途出现右括号比左括号多的情况：`src/lexical_parser.hpp:190`
+      - 当遇到语句结束符`;`时，括号没有匹配：`src/lexical_parser.hpp:225`
+   2. `[]`不匹配：
+      - 中途出现右括号比左括号多的情况：`src/lexical_parser.hpp:219`
+      - 当遇到语句结束符`;`时，括号没有匹配：`src/lexical_parser.hpp:225`
+   3. `{}`不匹配：
+      - 中途出现右括号比左括号多的情况：`src/lexical_parser.hpp:208`
+      - 当程序结束时，大括号也未能匹配：`src/lexical_parser.hpp:274`
+7. 输入无法匹配现有词法库的任何Pattern。`src/lexical_parser.hpp:258`
+
+然后，我编写了一个`error_manager`类，它完成了对源程序的扫描，区分出代码的每一行，然后在顺序解析代码的时候可以调用这个类的成员函数来进行`raise_error(int line,int col,string msg)`。当调用了`raise_error`后，这个`error_manger`会将输入存储在一个`std::vector<tuple<int,int,string> >`中，在最后调用输出函数时对所有错误信息进行输出。
+
+这里还做了一个小trick，我们经常使用`gcc`或者`clang`的时候，能看到错误信息中有不同的颜色：
+
+![clang](img/clang.png)
+
+经过查阅资料后发现这是使用ANSI Escape Code实现的，因此在我在输出错误信息的时候充分考虑了这一点。
+
+输入部分代码如下：
+
+```cpp
+void print_err() {
+  for (auto cur : errors) {
+    int line, col;
+    string msg;
+    tie(line,col,msg) = cur;
+    cerr << "\n\033[0;31merror\033[0m: line " << line << ", col " << col << ", " << msg << "\n";
+    if (line-1 < lines.size()) {
+      for (auto c:lines[line-1]) {
+        if (c == '\t') cerr << "    "; // 对制表符特殊处理，美化输出结果
+        else cerr << c;
+      }
+      cerr << "\n";
+      for (int i=0;i<col;i++) {
+        if (lines[line-1][i] == '\t') {
+          cerr << "   ";
+        }
+        if (i != col-1) cerr << " ";
+      }
+      cerr << "\033[0;32m^\033[0m\n";
+    }
+  }
+}
+```
+
+其中，`0;31`是红色，`0`是恢复正常颜色，`0;32`是绿色。
+
+最后实现了输出形式如下：
+
+![mylexical_analyzer](img/mylexical_analyzer.png)
+
+可以看到，这里我成功仿照了`clang`的错误颜色风格，生成了带有颜色的错误信息。并正确识别了源文件中所包括的全部的以上几种错误类型，与`clang`识别的错误相比只多不少。
+
