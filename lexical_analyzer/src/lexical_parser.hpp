@@ -104,6 +104,7 @@ public:
                                 else {
                                     if (types.find(name_of_type) != types.end() || symbols.has_struct_or_union(name_of_type)) {
                                         if (lexicals.lexical_exist(tmp)) errors.raise_error(line_number,ptr-linestart,"symbol already defined in the lexicals.");
+                                        else if (symbols.has_defined(tmp)) errors.raise_error(line_number,ptr-linestart,"symbol already defined");
                                         else {
                                             int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp);
                                             lexicals.add_count(lexicals.get_lexical_number("sym"));
