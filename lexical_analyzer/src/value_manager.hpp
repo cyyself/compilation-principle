@@ -9,7 +9,7 @@ using std::map;
 using std::vector;
 using std::pair;
 
-class value_manager { // 用于管理所有出现的值
+class value_manager { // 用于管理所有出现的值
 public:
     int insert(string type, string value) {
         if (value_id.find(value) != value_id.end()) return value_id[value];
