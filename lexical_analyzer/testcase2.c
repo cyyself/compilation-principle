@@ -28,5 +28,6 @@ int main() {
         printf("incorrect\n");
     }
     int array[123][456];
+    int i;
     return 0;
 }
