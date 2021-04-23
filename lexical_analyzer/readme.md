@@ -632,3 +632,56 @@ void print_err() {
 
 可以看到，这里我成功仿照了`clang`的错误颜色风格，生成了带有颜色的错误信息。并正确识别了源文件中所包括的全部的以上几种错误类型，与`clang`识别的错误相比只多不少。
 
+## 7. 程序说明
+
+程序代码文件结构：
+
+![tree](img/tree.png)
+
+程序代码文件结构如下：
+
+其中`main.cpp`是程序的入口，它负责读入要分析的程序然后调用`lexical_parser`进行分析，最后输出相应的统计信息、各种表格、以及错误信息。
+
+`testcase[1-3].c`是程序的测试用例，如下：
+
+1. `testcase1.c`是一个正确的C语言程序。
+2. `testcase2.c`是在`testcase1.c`的基础上通过注释取消一些函数的声明，然后加入一些其他的错误而成的错误程序。
+3. `testcase3.c`是词法表测试程序，它只包含我们的词法分析器支持的所有词法，没有任何完整的语句。
+
+此外，我还编写了`Makefile`来方便编译，使得老师和助教可以在安装了gcc后直接使用Make来编译我的程序并执行测试，`Makefile`编写如下：
+
+```makefile
+lexical_analyzer: src/main.cpp
+	g++ -std=c++17 src/main.cpp -o lexical_analyzer -fsanitize=address
+
+.PHONY: test1 test2 test3 test clean
+test1: lexical_analyzer testcase1.c
+	@echo "Testing Testcase1.c"
+	@./lexical_analyzer < testcase1.c
+
+test2: lexical_analyzer testcase2.c
+	@echo "Testing Testcase2.c"
+	@./lexical_analyzer < testcase2.c
+
+test3: lexical_analyzer testcase3.c
+	@echo "Testing Testcase3.c"
+	@./lexical_analyzer < testcase3.c
+
+test: lexical_analyzer testcase1.c testcase2.c testcase3.c
+	@echo "Testing Testcase1.c"
+	@./lexical_analyzer < testcase1.c
+	@echo "Testing Testcase2.c"
+	@./lexical_analyzer < testcase2.c
+	@echo "Testing Testcase3.c"
+	@./lexical_analyzer < testcase3.c
+
+clean:
+	rm lexical_analyzer
+```
+
+可以使用以下命令：
+
+- `make`：生成`lexical_analyzer`二进制可执行文件
+- `make test`：运行我预置的三个词法测试
+- `make clean`：删除`lexical_analyzer`二进制可执行文件
+- `make test[1-3]`：单独运行1-3之中的任何一个词法测试
