@@ -28,6 +28,10 @@ public:
         }
         printf("----- Const Table  END  -----\n");
     }
+    string get_value_str(int id) {
+        if (id >= 0 && id < all_value.size()) return all_value[id].second;
+        return "";
+    }
 private:
     vector <pair<string,string> > all_value;
     map <string,int> value_id; // 对于value，value一定能对应到type以及id，因此这里只存储value

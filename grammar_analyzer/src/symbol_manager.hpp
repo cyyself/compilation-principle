@@ -49,6 +49,10 @@ public:
             return true;
         }
     }
+    string get_symbol_str(int id) {
+        if (id >= 0 && id < all_symbol.size()) return all_symbol[id].second;
+        return "";
+    }
 private:
     vector <pair <string,string> > all_symbol;//存储类型和名称，方便后续进行判断
     map <string,int> symbol_id;//symbol_id只存储名称，便于反查类型

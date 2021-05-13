@@ -1,10 +1,14 @@
-#include "lexical_parser.hpp"
+#define DEBUG
+
+#include "grammar_parser.hpp"
 
 #define BUFFER_SIZE 128*1024
+
 
 char buffer[BUFFER_SIZE];
 
 int main() {
+    freopen("../testcase1.c","r",stdin);
     int ptr = -1;
     do {
         ptr ++;
@@ -12,9 +16,7 @@ int main() {
     }
     while (buffer[ptr] != EOF);
     buffer[ptr] = 0; // replace EOF to 0
-    // const char *buffer = "struct c {int a;};int a = 1;int b = 2;struct c d;char *e = \"abcd\"";
-    lexical_parser parser;
-    parser.parse_lexical(buffer);
-    parser.print_result();
+    grammar_parser parser(buffer);
+    parser.test();
 	return 0;
 }

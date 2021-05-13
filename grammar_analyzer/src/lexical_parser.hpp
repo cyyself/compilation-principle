@@ -20,7 +20,9 @@ using namespace value_parser;
 
 class lexical_parser {
 public:
-    void parse_lexical(const char *s) {
+    vector<pair<int,int> > parse_lexical(const char *s) {
+        bool error_flag = false;
+        vector <pair<int,int> > token;
         errors.init_lines(s);
         const char *ptr = s;
         bool comment_single = false, comment_multiline = false; // 注释识别状态机
@@ -36,7 +38,6 @@ public:
         while (*ptr && *ptr != EOF) {
             bool upd_name_of_type = false; // 处理上次类型是否更新，如果未更新则在最后清空name of type
             if (*ptr == '\n') { // 处理换行
-                printf("\n");
                 line_number ++;
                 linestart = ptr;
                 if (comment_single) { // 处理多行注释
@@ -64,10 +65,6 @@ public:
                     }
                     else if (*ptr == '\t' || *ptr == '\r' || *ptr == ' ') { // 保持状态
                         // 保持缩进，方便阅读
-#ifndef NO_SRC_MODE
-                        if (*ptr == '\t') printf("\t");
-                        else if(*ptr == ' ') printf(" ");
-#endif
                         upd_name_of_type = true;
                         off = 1;
                     }
@@ -78,22 +75,14 @@ public:
                             name_of_type = tmp;
                             upd_name_of_type = true;
                             lexicals.add_count(lexicals.get_lexical_number(tmp));
-#ifndef NO_SRC_MODE
-                            printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
-#else
-                            printf("(%02d,NULL)",lexicals.get_lexical_number(tmp));
-#endif
+                            token.emplace_back(lexicals.get_lexical_number(tmp),0);
                         }
                         else {
                             if (name_of_type != "") { // 识别为正在定义符号（注意特殊处理struct和union）
                                 if (name_of_type == "struct" || name_of_type == "union") { // 类型更新为自定义类型
                                     if (symbols.has_defined(tmp)) {
                                         lexicals.add_count(lexicals.get_lexical_number("sym"));
-#ifndef NO_SRC_MODE
-                                        printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp),tmp.c_str());
-#else
-                                        printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
-#endif
+                                        token.emplace_back(lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
                                     }
                                     else {
                                         symbol_ready_commit = make_pair(name_of_type,tmp); // 需要等待定义结束再commit
@@ -108,11 +97,7 @@ public:
                                         else {
                                             int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp);
                                             lexicals.add_count(lexicals.get_lexical_number("sym"));
-#ifndef NO_SRC_MODE
-                                            printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),inserted_id,tmp.c_str());
-#else
-                                            printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),inserted_id);
-#endif
+                                            token.emplace_back(lexicals.get_lexical_number("sym"),inserted_id);
                                             last_def_symbol_name = tmp;
                                             upd_name_of_type = true; // 暂时保留类型，处理逗号之后继续定义的情况
                                         }
@@ -120,11 +105,7 @@ public:
                                     }
                                     else {
                                         lexicals.add_count(lexicals.get_lexical_number("sym"));
-#ifndef NO_SRC_MODE
-                                        printf("(%02d,?,\"%s\")",lexicals.get_lexical_number("sym"),tmp.c_str());
-#else
-                                        printf("(%02d,?)",lexicals.get_lexical_number("sym"));
-#endif
+                                        error_flag = true;
                                         errors.raise_error(line_number,ptr-linestart,"undefined type \"" + string(tmp) + "\".");
                                     }
                                 }
@@ -133,33 +114,18 @@ public:
                                 // 直接翻译为对应词法
                                 if (lexicals.lexical_exist(tmp)) {
                                     lexicals.add_count(lexicals.get_lexical_number(tmp));
-#ifndef NO_SRC_MODE
-                                    printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
-#else
-                                    printf("(%02d,NULL)",lexicals.get_lexical_number(tmp));
-#endif
+                                    token.emplace_back(lexicals.get_lexical_number(tmp),0);
                                 }
                                 else if (symbols.has_defined(tmp)) {
                                     lexicals.add_count(lexicals.get_lexical_number("sym"));
-#ifndef NO_SRC_MODE
-                                    printf("(%02d,%03d,\"%s\")",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp),tmp.c_str());
-#else
-                                    printf("(%02d,%03d)",lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
-#endif
+                                    token.emplace_back(lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
                                 }
                                 else {
-#ifndef NO_SRC_MODE
-                                    printf("(?,?,\"%s\")",tmp.c_str());
-#else
-                                    printf("(?,?)");
-#endif
+                                    error_flag = true;
                                     errors.raise_error(line_number,ptr-linestart,string("undefined symbol \"") + tmp + string("\"."));
                                 }
                             }
                         }
-#ifdef DEBUG
-                        cout << tmp << "\n";
-#endif
                     }
                     else if (trie.firstExist(*ptr)) { // 识别运算符
                         off = trie.query(ptr);
@@ -196,7 +162,7 @@ public:
                                     else {
                                         int inserted_id = symbols.insert(symbol_ready_commit.first,symbol_ready_commit.second);
                                         lexicals.add_count(lexicals.get_lexical_number("sym"));
-                                        printf("(%02d,%03d,%s)",lexicals.get_lexical_number("sym"),inserted_id,symbol_ready_commit.second.c_str());
+                                        token.emplace_back(lexicals.get_lexical_number("sym"),inserted_id);
                                     }
                                     symbol_ready_commit = make_pair(string(""),string(""));
                                 }
@@ -228,11 +194,7 @@ public:
                                 }
                             }
                             lexicals.add_count(lexicals.get_lexical_number(tmp));
-#ifndef NO_SRC_MODE
-                            printf("(%02d,NULL,\"%s\")",lexicals.get_lexical_number(tmp),tmp.c_str());
-#else
-                            printf("(%02d,NULL)",lexicals.get_lexical_number(tmp));
-#endif
+                            token.emplace_back(lexicals.get_lexical_number(tmp),0);
                         }
                     }
                     else if (isdigit(*ptr) || *ptr == '"' || *ptr == '\'') { // 识别数值
@@ -245,20 +207,11 @@ public:
                         }
                         int inserted_id = values.insert(string(output_value_type(res.type)),tmp);
                         lexicals.add_count(lexicals.get_lexical_number("val"));
-#ifndef NO_SRC_MODE
-                        printf("(%02d,%03d,%s)",lexicals.get_lexical_number("val"),inserted_id,tmp.c_str());
-#else
-                        printf("(%02d,%03d)",lexicals.get_lexical_number("val"),inserted_id);
-#endif
-#ifdef DEBUG
-                        cout << genstring(ptr,off) << "\t" << string(output_value_type(res.type)) << "\n";
-#endif
+                        token.emplace_back(lexicals.get_lexical_number("val"),inserted_id);
                     }
                     else { // 不匹配任何字符，抛出异常
+                        error_flag = true;
                         errors.raise_error(line_number,ptr-linestart,"unknow character, skipped.");
-#ifdef DEBUG
-                        printf("error byte=%d\n",(int)*ptr);
-#endif
                         off = 1;
                     }
                     assert(off != 0);
@@ -272,6 +225,8 @@ public:
             }
         }
         if (br_curly != 0) errors.raise_error(last_curly_line,last_curly_col,"Bracket didn't match when source code ends.");
+        if (error_flag) return empty_vec;
+        else return token;
     }
     void print_result() {
         printf("\n\n");
@@ -286,6 +241,9 @@ public:
         printf("\n");
         values.print_all();
     }
+    void print_error() {
+        errors.print_err();
+    }
     lexical_parser() {
         for (string x : type_qualifiers) {
             lexicals.insert(x);
@@ -299,6 +257,7 @@ public:
         for (string x : builtin_functions) {
             lexicals.insert(x);
         }
+        ops_begin = lexicals.size();
         for (string x : ops) {
             lexicals.insert(x);
             trie.insertNode(x.c_str());
@@ -318,14 +277,16 @@ public:
             lexicals.insert(tmp);
             trie.insertNode(tmp.c_str());
         }
+        ops_end = lexicals.size() - 1;
         lexicals.post_init();
     }
+    value_manager values;
+    symbol_manager symbols;
+    lexical_manager lexicals;
 private:
     opTrie trie;
     error_manager errors;
-    value_manager values;
-    lexical_manager lexicals;
-    symbol_manager symbols;
+    int ops_begin, ops_end;
     int read_keyword(const char *str) {//start with alpha or _ 
         int offset = 0;
         while (isdigit(*str) || isalpha(*str) || *str == '_') {
@@ -345,4 +306,5 @@ private:
         for (int i=0;i<level;i++) res += "*";
         return res;
     }
+    const vector <pair<int,int> > empty_vec;
 };

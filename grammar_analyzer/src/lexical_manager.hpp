@@ -50,6 +50,13 @@ public:
         if (lexical_exist(s)) return lexical_id[s];
         else return -1;
     }
+    string get_lexical_str(int id) {
+        if (id >= 0 && id < all_lexical.size()) return all_lexical[id];
+        return "";
+    }
+    int size() {
+        return all_lexical.size();
+    }
 private:
     vector <string> all_lexical;
     map <string,int> lexical_id;
