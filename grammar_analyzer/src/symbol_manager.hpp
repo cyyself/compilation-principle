@@ -49,6 +49,15 @@ public:
             return true;
         }
     }
+    bool has_suffix(int id, string suffix) {
+        if (id >= 0 && id < all_symbol.size()) {
+            string tmp = all_symbol[id].first;
+            if (tmp.length() >= suffix.length()) {
+                if (tmp.substr(tmp.length()-suffix.length(),suffix.length()) == suffix) return true;
+            }
+        }
+        return false;
+    }
     string get_symbol_str(int id) {
         if (id >= 0 && id < all_symbol.size()) return all_symbol[id].second;
         return "";

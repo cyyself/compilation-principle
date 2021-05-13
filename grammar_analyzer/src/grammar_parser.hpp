@@ -9,9 +9,10 @@ using std::vector;
 enum TreeNodeType {
 	FUNCTION, // 函数
     SENTENSE, // 语句
-	VAR, // 变量声明
-	SINGLE_VAR, // 单个变量的声明
-	STRUCT, // 结构体
+	SYMDECLEAR, // 符号的声明，函数、变量、结构体最开始都走向这种声明
+    QUALIFIERS, // 修饰符
+	SINGLEVAR, // 单个变量的声明
+	STRUCTUNION, // 结构体或联合体
 	BLOCK, // 代码块
 	EXP, // 表达式
 	FOR, // for循环
@@ -30,6 +31,7 @@ struct TreeNode {
 	vector <TreeNode*> child;
     TreeNode() {
         fa = NULL;
+        token = {-1,0};
     }
 };
 
@@ -82,42 +84,20 @@ private:
     map <int,pair<int,bool> > op_priority;
     void init_op_priority() {
         const vector < tuple<int,string,bool> > op_priority_init({
-            {1,"[",false},
-            {1,"]",false},
-            {1,".",false},
-            {1,"->",false},
-            {2,"!",true},
-            {2,"~",true},
-            {2,"sizeof",true},
-            {3,"/",false},
-            {3,"%",false},
-            {3,"*",false},
-            {5,"<<",false},
-            {5,">>",false},
-            {6,"<",false},
-            {6,"<=",false},
-            {6,">",false},
-            {6,">=",false},
-            {7,"==",false},
-            {7,"!=",false},
+            {1,"[",false},{1,"]",false},{1,".",false},{1,"->",false},
+            {2,"!",true},{2,"~",true},{2,"sizeof",true},
+            {3,"/",false},{3,"%",false},{3,"*",false},
+            {5,"<<",false},{5,">>",false},
+            {6,"<",false},{6,"<=",false},{6,">",false},{6,">=",false},
+            {7,"==",false},{7,"!=",false},
             {8,"&",false},
             {9,"^",false},
             {10,"|",false},
             {11,"&&",false},
             {12,"||",false},
-            {13,"?",true},
-            {13,":",true},
-            {14,"=",true},
-            {14,"+=",true},
-            {14,"-=",true},
-            {14,"*=",true},
-            {14,"/=",true},
-            {14,"%=",true},
-            {14,"<<=",true},
-            {14,">>=",true},
-            {14,"&=",true},
-            {14,"^=",true},
-            {14,"|=",true}
+            {13,"?",true},{13,":",true},
+            {14,"=",true},{14,"+=",true},{14,"-=",true},{14,"*=",true},{14,"/=",true},{14,"%=",true},
+            {14,"<<=",true},{14,">>=",true},{14,"&=",true},{14,"^=",true},{14,"|=",true}
         });
         for (auto x : op_priority_init) {
             int token_number = lex.lexicals.get_lexical_number(get<1>(x));
@@ -127,6 +107,14 @@ private:
         }
     }
     
+    /*
+    function parse_exp: 
+    解析表达式
+
+    该TreeNode全为OP或SYM或VOL或FUNCTIONCALL
+
+    OP为二叉树，一个符号连接两个SYM或VOL或OP或单个NULL（对于单结合的符号，例如i++)
+    */
     int parse_exp(int start_pos,TreeNode **rt) { // terminal at ,
         int last_op_priority = -1;
         enum token_type {
@@ -178,6 +166,7 @@ private:
                         node->type = OP;
                         node->token = {token[token_ptr].first,cur_priority};
                         node->child.push_back(lastnode);
+                        node->child.push_back(NULL);
                         if (lastnode->fa) {
                             bool flag = false;
                             for (auto &x : lastnode->fa->child) if (x == lastnode) {
@@ -197,35 +186,45 @@ private:
                         // ++i
                         int cur_priority = 2;
                         TreeNode *node = new TreeNode();
-                        node->fa = lastnode->fa;
+                        node->fa = lastnode;
                         node->type = OP;
                         node->token = {token[token_ptr].first,cur_priority};
                         node->child.push_back(NULL);
-                        node->child.push_back(lastnode);
-                        if (lastnode->fa) {
-                            bool flag = false;
-                            for (auto &x : lastnode->fa->child) if (x == lastnode) {
-                                x = node;
-                                flag = true;
-                                break;
-                            }
-                            assert(flag);
-                        }
-                        else *rt = node;
-                        lastnode->fa = node;
+                        lastnode->child.push_back(node);
                         lastnode = node;
                         last_op_priority = cur_priority;
-                        last_token_type = VALUE;
+                        last_token_type = OPERATOR;
                     }
                 }
                 token_ptr ++;
             }
+            else if (sym_str == "*" || sym_str == "&") { //处理指针与乘号、Bitwise and
+                if (last_token_type == VALUE) {
+                    // 不当做指针
+                    int cur_priority = (sym_str == "*") ? 3 : 8;
+                    bool cur_as = false;
+                    merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as);
+                    last_token_type = OPERATOR;
+                    last_op_priority = cur_priority;
+                    token_ptr ++;
+                }
+                else {
+                    // 当做指针，右结合
+                    int cur_priority = 2;
+                    TreeNode *node = new TreeNode();
+                    node->fa = lastnode;
+                    node->type = OP;
+                    node->token = {token[token_ptr].first,cur_priority};
+                    node->child.push_back(NULL);
+                    lastnode->child.push_back(node);
+                    lastnode = node;
+                    last_op_priority = cur_priority;
+                    last_token_type = OPERATOR;
+                }
+            }
             else if (op_priority.find(token[token_ptr].first) != op_priority.end()) {
                 int cur_priority = op_priority[token[token_ptr].first].first;
                 bool cur_as = op_priority[token[token_ptr].first].second;
-                bool dir = false;
-                if (cur_priority > last_op_priority) dir = true;
-                else if (cur_priority == last_op_priority && !cur_as) dir = true;
                 merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as);
                 last_token_type = OPERATOR;
                 last_op_priority = cur_priority;
@@ -287,8 +286,69 @@ private:
         }
     }
     */
-    int parse_var_declear(int start_pos, TreeNode **rt) {
-        // TODO
+    int parse_name_with_exp(int start_pos, TreeNode **rt) {
+
+    }
+    /*
+    在变量声明前读取修饰符，如const、static等，后续加入到符号表定义中。
+    */
+    int parse_qualifiers(int start_pos, TreeNode **rt) {
+        // <修饰符> ::= 空集 | <单个修饰符> <修饰符>
+        // 不存在左递归，因此可以使用递归下降
+        int token_ptr = start_pos;
+        string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first);
+        *rt = new TreeNode();
+        (*rt)->type = QUALIFIERS;
+        while (token_ptr < token.size() && type_qualifiers.find(sym_str) == type_qualifiers.end()) {
+            TreeNode *node = new TreeNode();
+            node->fa = *rt;
+            node->token = token[token_ptr];
+            node->type = SYM;
+            (*rt)->child.push_back(node);
+            token_ptr ++;
+        }
+        return token_ptr - start_pos;
+    }
+    int parse_struct(int start_pos, TreeNode **rt) {
+        // 考虑分为结构体的使用和结构体的声明
+    }
+    int parse_function(int start_pos, TreeNode **rt) {
+        // 只考虑函数声明
+    }
+    int parse_sym_with_array(int start_pos, TreeNode **rt) {
+        // sym[exp1][exp2]....
+    }
+    int parse_symbol_declear(int start_pos, TreeNode **rt) {
+        // <符号定义> ::= <修饰符> <类型声明>
+        // 其中函数定义的识别已经在词法分析阶段检测大括号的方式预处理，因此这里直接使用当时的结果即可避免递归下降法的回溯
+        int token_ptr = start_pos;
+        TreeNode *qualifiers;
+        token_ptr += parse_qualifiers(token_ptr,&qualifiers);
+        string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first); // 检查类型
+        if (types.find(sym_str) != types.end()) {
+            if (sym_str == "struct" || sym_str =="union") {
+                assert(qualifiers->child.size() == 0);// TODO: 有时间补一下结构体和联合体要求不能有qualifiers
+                return parse_struct(token_ptr,rt);
+            }
+            else {
+                int ptr_cnt = 0;
+                while (token_ptr + 1 < token.size() && token[token_ptr+1].first == lex.symbols.get_symbol_id("*")) {
+                    token_ptr ++;
+                    ptr_cnt ++;
+                }
+                if (token_ptr + 1 < token.size() && token[token_ptr+1].first == sym_id && lex.symbols.has_suffix(token[token_ptr+1].second,"func")) {
+                    // 词法分析阶段识别为了函数，按照函数处理
+                    // TODO
+                }
+                else {
+                    // 可能是变量或者函数，继续识别
+                    // TODO
+                }
+            }
+        }
+        else {
+
+        }
     }
     int parse_struct_declear(int start_pos, TreeNode **rt) { // 适用于struct和union的定义
         // TODO
@@ -367,6 +427,16 @@ private:
             chnode->token = {token.first,cur_pri};
             chnode->child.push_back(pos);
             *lastnode = chnode;
+        }
+    }
+    void tree_copy(TreeNode *src, TreeNode *dst) {
+        dst->token = src->token;
+        dst->type = src->type;
+        for (auto x : src->child) {
+            TreeNode *newnode = new TreeNode();
+            dst->child.push_back(newnode);
+            newnode->fa = dst;
+            tree_copy(x,newnode);
         }
     }
 };
