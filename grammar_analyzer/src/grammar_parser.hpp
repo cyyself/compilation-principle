@@ -62,13 +62,16 @@ public:
         init_op_priority();
     }
 #ifdef DEBUG
-    void pause() {
-
+    void print_tree(TreeNode *tr,int depth = 0) {
+        for (int i=0;i<depth;i++) printf("\t");
+        printf("(%d,%d)",tr->token.first,tr->token.second);
+        printf("\n");
+        for (auto x : tr->child) print_tree(x,depth+1);
     }
     void test() {
         TreeNode *tr;
         parse_exp(0,&tr);
-        pause();
+        print_tree(tr);
     }
 #endif
 private:
@@ -143,15 +146,20 @@ private:
                 token_ptr += off;
                 sym_str = lex.lexicals.get_lexical_str(token[token_ptr+1].first);
                 if (sym_str == ")") {
-                    token_ptr ++;
+                    token_ptr += 2;
                 }
                 else {
                     assert(false);
                 }
+                if (lastnode == NULL) *rt = lastnode = node;
+                else {
+                    lastnode->child.push_back(node);
+                    lastnode = node;
+                }
                 last_token_type = VALUE;
             }
             else if (sym_str == "-" || sym_str == "+" || sym_str == "--" || sym_str == "++") {
-                if (last_token_type == VALUE) {
+                if (last_token_type == VALUE && (sym_str == "-" || sym_str == "+")) {
                     // 当做运算符处理
                     int cur_priority = 4;
                     bool cur_as = false;
@@ -162,14 +170,53 @@ private:
                 }
                 else {
                     // 一元加减处理（正负号）
-                    TreeNode *node = new TreeNode();
-                    node->fa = lastnode;
-                    node->type = OP;
-                    node->token = token[token_ptr];
-                    node->child.push_back(NULL);
-                    if (lastnode == NULL) *rt = lastnode = node;
-                    else lastnode->child.push_back(node);
-                    last_token_type = VALUE;
+                    if (last_token_type == VALUE) {
+                        // example: i++
+                        int cur_priority = 1;
+                        TreeNode *node = new TreeNode();
+                        node->fa = lastnode->fa;
+                        node->type = OP;
+                        node->token = {token[token_ptr].first,cur_priority};
+                        node->child.push_back(lastnode);
+                        if (lastnode->fa) {
+                            bool flag = false;
+                            for (auto &x : lastnode->fa->child) if (x == lastnode) {
+                                x = node;
+                                flag = true;
+                                break;
+                            }
+                            assert(flag);
+                        }
+                        else *rt = node;
+                        lastnode->fa = node;
+                        lastnode = node;
+                        last_op_priority = cur_priority;
+                        last_token_type = VALUE;
+                    }
+                    else {
+                        // ++i
+                        int cur_priority = 2;
+                        TreeNode *node = new TreeNode();
+                        node->fa = lastnode->fa;
+                        node->type = OP;
+                        node->token = {token[token_ptr].first,cur_priority};
+                        node->child.push_back(NULL);
+                        node->child.push_back(lastnode);
+                        if (lastnode->fa) {
+                            bool flag = false;
+                            for (auto &x : lastnode->fa->child) if (x == lastnode) {
+                                x = node;
+                                flag = true;
+                                break;
+                            }
+                            assert(flag);
+                        }
+                        else *rt = node;
+                        lastnode->fa = node;
+                        lastnode = node;
+                        last_op_priority = cur_priority;
+                        last_token_type = VALUE;
+                    }
                 }
                 token_ptr ++;
             }
@@ -240,6 +287,12 @@ private:
         }
     }
     */
+    int parse_var_declear(int start_pos, TreeNode **rt) {
+        // TODO
+    }
+    int parse_struct_declear(int start_pos, TreeNode **rt) { // 适用于struct和union的定义
+        // TODO
+    }
     /*
     merge_op 用于将符号合并到分析树上
 
@@ -278,7 +331,7 @@ private:
                     flag = true;
                     break;
                 }
-                assert(flag = true); // debug
+                assert(flag); // debug
             }
             else *rt = chnode;
             chnode->fa = pos->fa;
@@ -305,7 +358,7 @@ private:
                     flag = true;
                     break;
                 }
-                assert(flag = true); // debug
+                assert(flag); // debug
             }
             else *rt = chnode;
             chnode->fa = pos->fa;
