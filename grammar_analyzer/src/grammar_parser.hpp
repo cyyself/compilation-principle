@@ -7,8 +7,8 @@ using std::pair;
 using std::vector;
 
 enum TreeNodeType {
-	FUNCTION, // 函数
-    FUNCTION_DECLEAR, // 函数
+	FUNCTIONWITHPARAM, // 函数调用符 函数名(参数,参数2,...)
+    FUNCTION_DECLEAR, // 函数定义
     QUALIFIERS, // 修饰符
     VARDECLEAERS, // 一组的变量声明
     SINGLEQUALIFIER, // 单个修饰符
@@ -330,6 +330,9 @@ private:
     int parse_struct(int start_pos, TreeNode **rt) {
         // 考虑分为结构体的使用和结构体的声明
     }
+    int parse_function_with_param(int start_pos, TreeNode **rt) {
+
+    }
     int parse_function(int start_pos, TreeNode **rt) {
         // 只考虑函数声明
     }
@@ -360,7 +363,9 @@ private:
                             token_ptr ++;
                             if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
                                 token_ptr ++;
+                                TreeNode *node;
                                 int off = parse_codeblock(token_ptr,&node);
+                                (*rt)->append_ch(node);
                                 token_ptr += off;
                                 if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
                                     token_ptr ++;
