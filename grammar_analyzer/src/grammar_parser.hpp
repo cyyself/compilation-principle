@@ -204,8 +204,11 @@ private:
                         node->type = OP;
                         node->token = {token[token_ptr].first,cur_priority};
                         node->child.push_back(NULL);
-                        lastnode->child.push_back(node);
-                        lastnode = node;
+                        if (lastnode == NULL) *rt = lastnode = node;
+                        else {
+                            lastnode->child.push_back(node);
+                            lastnode = node;
+                        }
                         last_op_priority = cur_priority;
                         last_token_type = OPERATOR;
                     }
@@ -230,8 +233,11 @@ private:
                     node->type = OP;
                     node->token = {token[token_ptr].first,cur_priority};
                     node->child.push_back(NULL);
-                    lastnode->child.push_back(node);
-                    lastnode = node;
+                    if (lastnode == NULL) *rt = lastnode = node;
+                    else {
+                        lastnode->child.push_back(node);
+                        lastnode = node;
+                    }
                     last_op_priority = cur_priority;
                     last_token_type = OPERATOR;
                 }
@@ -347,6 +353,7 @@ private:
                     TreeNode *node;
                     int off = parse_codeblock(token_ptr,&node);
                     (*rt)->append_ch(node);
+                    token_ptr += off;
                     if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
                         token_ptr ++;
                         if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "else") {
@@ -356,6 +363,7 @@ private:
                                 int off = parse_codeblock(token_ptr,&node);
                                 token_ptr += off;
                                 if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
+                                    token_ptr ++;
                                     return token_ptr - start_pos;
                                 }
                                 else {
@@ -367,6 +375,42 @@ private:
                             }
                         }
                         else return token_ptr - start_pos;
+                    }
+                }
+            }
+            else {
+                assert(false); // TODO: 错误处理
+            }
+        }
+        else {
+            assert(false); // TODO: 错误处理
+        }
+        return token_ptr - start_pos;
+    }
+    int parse_while(int start_pos, TreeNode **rt) {
+        assert(lex.lexicals.get_lexical_str(token[start_pos].first) == "while");
+        *rt = new TreeNode();
+        (*rt)->type = WHILE;
+        (*rt)->token = token[start_pos];
+        int token_ptr = start_pos;
+        token_ptr ++;
+        if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
+            token_ptr ++;
+            TreeNode *node;
+            int off = parse_exp(token_ptr,&node);
+            token_ptr += off;
+            (*rt)->append_ch(node);
+            if (lex.lexicals.get_lexical_str(token[token_ptr].first) == ")") {
+                token_ptr ++;
+                if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
+                    token_ptr ++;
+                    TreeNode *node;
+                    int off = parse_codeblock(token_ptr,&node);
+                    (*rt)->append_ch(node);
+                    token_ptr += off;
+                    if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
+                        token_ptr ++;
+                        return token_ptr - start_pos;
                     }
                 }
             }
@@ -394,7 +438,8 @@ private:
             assert(false); // TODO
         }
         else if (sym_str == "while") {
-            assert(false); // TODO
+            int off = parse_while(start_pos,rt);
+            return off;
         }
         else if (sym_str == "do") {
             assert(false); // TODO
