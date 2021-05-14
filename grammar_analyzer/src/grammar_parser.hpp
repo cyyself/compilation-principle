@@ -8,8 +8,9 @@ using std::vector;
 
 enum TreeNodeType {
 	FUNCTION, // 函数
-    SENTENSE, // 语句
+    FUNCTION_DECLEAR, // 函数
     QUALIFIERS, // 修饰符
+    VARDECLEAERS, // 一组的变量声明
     SINGLEQUALIFIER, // 单个修饰符
     SINGLETYPEVAR, // 单个变量的声明，token.first为-1，token.second表示指针级数，child顺序是 修饰符,类型,初始值
 	SINGLEVAR, // 单个变量的声明或使用（包含数组）（不含类型以及修饰符) 本身token表示sym，child依次放入数组
@@ -85,7 +86,7 @@ public:
     }
     void test() {
         TreeNode *tr;
-        parse_symbol_declear(0,&tr);
+        parse_codeblock(0,&tr);
         print_tree(tr);
     }
 #endif
@@ -243,17 +244,19 @@ private:
                 token_ptr ++;
             }
             else if (token[token_ptr].first == sym_id) {
-                TreeNode *node = new TreeNode();
-                node->fa = lastnode;
-                node->type = SYM;
-                node->token = token[token_ptr];
-                if (lastnode == NULL) *rt = lastnode = node;
+                if (lex.symbols.has_suffix(token[token_ptr].second,"func")) {
+                    assert(false);// TODO: 函数调用识别
+                }
                 else {
-                    lastnode->child.push_back(node);
-                    lastnode = node;
+                    TreeNode *node;
+                    token_ptr += parse_sym_with_array(token_ptr,&node);
+                    if (lastnode == NULL) *rt = lastnode = node;
+                    else {
+                        lastnode->child.push_back(node);
+                        lastnode = node;
+                    }
                 }
                 last_token_type = VALUE;
-                token_ptr ++;
                 // TODO: 函数和数组的处理
             }
             else if (token[token_ptr].first == val_id) {
@@ -298,9 +301,6 @@ private:
         }
     }
     */
-    int parse_name_with_exp(int start_pos, TreeNode **rt) {
-
-    }
     /*
     在变量声明前读取修饰符，如const、static等，后续加入到符号表定义中。
     */
@@ -326,6 +326,52 @@ private:
     int parse_function(int start_pos, TreeNode **rt) {
         // 只考虑函数声明
     }
+    int parse_sentense(int start_pos, TreeNode **rt) {
+        string sym_str = lex.lexicals.get_lexical_str(token[start_pos].first);
+        if (types.find(sym_str) != types.end() || type_qualifiers.find(sym_str) != type_qualifiers.end()) {
+            // 按照类型处理
+            int off = parse_symbol_declear(start_pos,rt);
+            return off;
+        }
+        else if (sym_str == "if") {
+            assert(false); // TODO
+        }
+        else if (sym_str == "for") {
+            assert(false); // TODO
+        }
+        else if (sym_str == "while") {
+            assert(false); // TODO
+        }
+        else if (sym_str == "do") {
+            assert(false); // TODO
+        }
+        else {
+            int off = parse_exp(start_pos,rt);
+            if (token[start_pos + off].first == lex.lexicals.get_lexical_number(";")) {
+                return off + 1;
+            }
+            else {
+                assert(false); // TODO: 错误处理
+            }
+        }
+    }
+    int parse_codeblock(int start_pos, TreeNode **rt) {
+        int token_ptr = start_pos;
+        *rt = new TreeNode();
+        (*rt)->type = BLOCK;
+        while (token_ptr < token.size() && token[token_ptr].first != lex.lexicals.get_lexical_number("}")) {
+            TreeNode *node;
+            int off = parse_sentense(token_ptr,&node);
+            if (off == 0) {
+                assert(false); // TODO: 错误处理
+            }
+            else {
+                token_ptr += off;
+                (*rt)->append_ch(node);
+            }
+        }
+        return token_ptr - start_pos;
+    }
     int parse_sym_with_array(int start_pos, TreeNode **rt) {
         // sym[exp1][exp2]....
         int token_ptr = start_pos;
@@ -336,16 +382,13 @@ private:
             token_ptr ++;
             while (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("[")) {
                 // 检测到数组声明
+                token_ptr ++;
                 TreeNode *exp;
-                int off = parse_exp(token_ptr+2,&exp);
+                int off = parse_exp(token_ptr,&exp);
                 token_ptr += off;
-                if (token_ptr + 1 < token.size() && token[token_ptr+1].first == lex.lexicals.get_lexical_number("]")) {
+                if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("]")) {
                     (*rt)->append_ch(exp);
-                    /*
-                    exp->fa = *rt;
-                    (*rt)->child.push_back(exp);
-                    */
-                    token_ptr += 2;
+                    token_ptr ++;
                 }
                 else {
                     assert(false);
@@ -354,7 +397,7 @@ private:
             }
         }
         else {
-            assert("false");
+            assert("false"); // 说明语法分析器有问题
         }
         return token_ptr - start_pos;
     }
@@ -368,7 +411,7 @@ private:
         if (types.find(sym_str) != types.end() && sym_str != "struct" && sym_str != "union") {
             if (allow_multiple) {
                 (*rt) = new TreeNode();
-                (*rt)->type = SENTENSE;
+                (*rt)->type = VARDECLEAERS;
             }
             pair <int,int> type_token = token[token_ptr];
             token_ptr ++;
@@ -420,7 +463,10 @@ private:
                             token_ptr ++;
                         }
                     }
-                    else return token_ptr - start_pos;
+                    else {
+                        *rt = thisnode;
+                        return token_ptr - start_pos;
+                    }
                 }
                 else {
                     break;
@@ -453,14 +499,13 @@ private:
                     ptr_cnt ++;
                 }
                 if (token_ptr + 1 < token.size() && token[token_ptr+1].first == sym_id && lex.symbols.has_suffix(token[token_ptr+1].second,"func")) {
-
+                    assert(false);
                     // 词法分析阶段识别为了函数，按照函数处理
                     // TODO
                 }
                 else {
-                    return parse_var_declear(ptr_checkpoint,rt,qualifiers);
                     // 识别为变量，继续处理
-                    // TODO
+                    return parse_var_declear(ptr_checkpoint,rt,qualifiers);
                 }
             }
         }
