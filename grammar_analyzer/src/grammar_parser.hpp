@@ -9,16 +9,18 @@ using std::vector;
 enum TreeNodeType {
 	FUNCTION, // 函数
     SENTENSE, // 语句
-	SYMDECLEAR, // 符号的声明，函数、变量、结构体最开始都走向这种声明
     QUALIFIERS, // 修饰符
-	SINGLEVAR, // 单个变量的声明
+    SINGLEQUALIFIER, // 单个修饰符
+    SINGLETYPEVAR, // 单个变量的声明，token.first为-1，token.second表示指针级数，child顺序是 修饰符,类型,初始值
+	SINGLEVAR, // 单个变量的声明或使用（包含数组）（不含类型以及修饰符) 本身token表示sym，child依次放入数组
+    TYPE, // 定义类型，如果是结构体则先为struct/union则先为struct/union对应的符号，
 	STRUCTUNION, // 结构体或联合体
 	BLOCK, // 代码块
 	EXP, // 表达式
 	FOR, // for循环
 	WHILE, // while循环
 	DOWHILE, // do while循环
-    OP, // 操作符
+    OP, // 操作符，保证一定二叉，token.second表示操作符优先级
     SYM, // 符号
     VAL, // 常量
 	TERM //终结符
@@ -32,6 +34,13 @@ struct TreeNode {
     TreeNode() {
         fa = NULL;
         token = {-1,0};
+    }
+    void append_ch(TreeNode *node) {
+        if (node) {
+            assert(node->fa == NULL); // 避免多连接问题
+            node->fa = this;
+        }
+        child.push_back(node);
     }
 };
 
@@ -66,13 +75,17 @@ public:
 #ifdef DEBUG
     void print_tree(TreeNode *tr,int depth = 0) {
         for (int i=0;i<depth;i++) printf("\t");
-        printf("(%d,%d)",tr->token.first,tr->token.second);
-        printf("\n");
-        for (auto x : tr->child) print_tree(x,depth+1);
+        if (tr) {
+            printf("(%d,%d)\n",tr->token.first,tr->token.second);
+            for (auto x : tr->child) print_tree(x,depth+1);
+        }
+        else {
+            printf("NULL\n");
+        }
     }
     void test() {
         TreeNode *tr;
-        parse_exp(0,&tr);
+        parse_symbol_declear(0,&tr);
         print_tree(tr);
     }
 #endif
@@ -84,13 +97,12 @@ private:
     map <int,pair<int,bool> > op_priority;
     void init_op_priority() {
         const vector < tuple<int,string,bool> > op_priority_init({
-            {1,"[",false},{1,"]",false},{1,".",false},{1,"->",false},
+            {1,".",false},{1,"->",false}, // 数组在处理符号的时候单独处理
             {2,"!",true},{2,"~",true},{2,"sizeof",true},
-            {3,"/",false},{3,"%",false},{3,"*",false},
+            {3,"/",false},{3,"%",false},
             {5,"<<",false},{5,">>",false},
             {6,"<",false},{6,"<=",false},{6,">",false},{6,">=",false},
             {7,"==",false},{7,"!=",false},
-            {8,"&",false},
             {9,"^",false},
             {10,"|",false},
             {11,"&&",false},
@@ -293,18 +305,17 @@ private:
     在变量声明前读取修饰符，如const、static等，后续加入到符号表定义中。
     */
     int parse_qualifiers(int start_pos, TreeNode **rt) {
-        // <修饰符> ::= 空集 | <单个修饰符> <修饰符>
+        // <修饰符> ::= 空集 | (<单个修饰符> <修饰符>)
         // 不存在左递归，因此可以使用递归下降
         int token_ptr = start_pos;
         string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first);
         *rt = new TreeNode();
         (*rt)->type = QUALIFIERS;
-        while (token_ptr < token.size() && type_qualifiers.find(sym_str) == type_qualifiers.end()) {
+        while (token_ptr < token.size() && type_qualifiers.find(sym_str) != type_qualifiers.end()) {
             TreeNode *node = new TreeNode();
-            node->fa = *rt;
             node->token = token[token_ptr];
-            node->type = SYM;
-            (*rt)->child.push_back(node);
+            node->type = SINGLEQUALIFIER;
+            (*rt)->append_ch(node);
             token_ptr ++;
         }
         return token_ptr - start_pos;
@@ -317,6 +328,110 @@ private:
     }
     int parse_sym_with_array(int start_pos, TreeNode **rt) {
         // sym[exp1][exp2]....
+        int token_ptr = start_pos;
+        if (token[start_pos].first == sym_id && !lex.symbols.has_suffix(token[token_ptr].second,"func")) {
+            *rt = new TreeNode();
+            (*rt)->type = SINGLEVAR;
+            (*rt)->token = token[start_pos];
+            token_ptr ++;
+            while (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("[")) {
+                // 检测到数组声明
+                TreeNode *exp;
+                int off = parse_exp(token_ptr+2,&exp);
+                token_ptr += off;
+                if (token_ptr + 1 < token.size() && token[token_ptr+1].first == lex.lexicals.get_lexical_number("]")) {
+                    (*rt)->append_ch(exp);
+                    /*
+                    exp->fa = *rt;
+                    (*rt)->child.push_back(exp);
+                    */
+                    token_ptr += 2;
+                }
+                else {
+                    assert(false);
+                    // TODO: 错误处理
+                }
+            }
+        }
+        else {
+            assert("false");
+        }
+        return token_ptr - start_pos;
+    }
+    int parse_var_declear(int start_pos, TreeNode **rt, TreeNode *qualifiers, bool allow_multiple = true) { // allow_multiple用于识别函数参数，因为采用的是逗号分隔
+        // 注意：这里不包含修饰符，修饰符作为参数传入
+        // example: int *sym1[exp1][exp2], sym2 = exp2;
+        // 这里不处理struct/union，这两者用单独函数处理
+        // SINGLETYPEVAR: 单个变量的声明，包含类型和修饰符以及指针 其中token.second表示指针级数，child顺序是 修饰符,类型,SINGLEVAR(包含符号名和数组),初始值(optional)
+        int token_ptr = start_pos;
+        string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first);
+        if (types.find(sym_str) != types.end() && sym_str != "struct" && sym_str != "union") {
+            if (allow_multiple) {
+                (*rt) = new TreeNode();
+                (*rt)->type = SENTENSE;
+            }
+            pair <int,int> type_token = token[token_ptr];
+            token_ptr ++;
+            do {
+                if (allow_multiple && lex.lexicals.get_lexical_str(token[token_ptr].first) == ";") {
+                    token_ptr ++;
+                    break;
+                }
+                int ptr_cnt = 0;
+                while (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "*") { // 检测到指针
+                    ptr_cnt ++;
+                    token_ptr ++;
+                }
+                if (token_ptr < token.size() && token[token_ptr].first == sym_id) {
+                    TreeNode *single_var;
+                    int off = parse_sym_with_array(token_ptr,&single_var); // TODO: 错误处理
+                    token_ptr += off;
+                    TreeNode *thisnode = new TreeNode();
+                    thisnode->type = SINGLETYPEVAR;
+                    thisnode->token = {-1,ptr_cnt};
+
+                    if (qualifiers) {
+                        TreeNode *tmpqualifiers = new TreeNode();
+                        tree_copy(qualifiers,tmpqualifiers);
+                        thisnode->append_ch(tmpqualifiers);
+                    }
+                    else {
+                        thisnode->append_ch(NULL);
+                    }
+
+                    TreeNode *type = new TreeNode();
+                    type->type = TYPE;
+                    type->token = type_token;
+                    thisnode->append_ch(type);
+
+                    thisnode->append_ch(single_var);
+
+
+                    if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("=")) { // 处理初始化
+                        token_ptr ++;
+                        TreeNode *value;
+                        int off = parse_exp(token_ptr,&value);
+                        token_ptr += off;
+                        thisnode->append_ch(value);
+                    }
+                    if (allow_multiple) {
+                        (*rt)->append_ch(thisnode);
+                        if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number(",")) {
+                            token_ptr ++;
+                        }
+                    }
+                    else return token_ptr - start_pos;
+                }
+                else {
+                    break;
+                }
+            }
+            while (allow_multiple);
+        }
+        else {
+            assert(false); // TODO: 错误处理
+        }
+        return token_ptr - start_pos;
     }
     int parse_symbol_declear(int start_pos, TreeNode **rt) {
         // <符号定义> ::= <修饰符> <类型声明>
@@ -331,17 +446,20 @@ private:
                 return parse_struct(token_ptr,rt);
             }
             else {
+                int ptr_checkpoint = token_ptr;
                 int ptr_cnt = 0;
                 while (token_ptr + 1 < token.size() && token[token_ptr+1].first == lex.symbols.get_symbol_id("*")) {
                     token_ptr ++;
                     ptr_cnt ++;
                 }
                 if (token_ptr + 1 < token.size() && token[token_ptr+1].first == sym_id && lex.symbols.has_suffix(token[token_ptr+1].second,"func")) {
+
                     // 词法分析阶段识别为了函数，按照函数处理
                     // TODO
                 }
                 else {
-                    // 可能是变量或者函数，继续识别
+                    return parse_var_declear(ptr_checkpoint,rt,qualifiers);
+                    // 识别为变量，继续处理
                     // TODO
                 }
             }
@@ -430,6 +548,9 @@ private:
         }
     }
     void tree_copy(TreeNode *src, TreeNode *dst) {
+        if (src) {
+            dst = new TreeNode();
+        }
         dst->token = src->token;
         dst->type = src->type;
         for (auto x : src->child) {
