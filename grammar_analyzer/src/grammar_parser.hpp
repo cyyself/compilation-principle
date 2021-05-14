@@ -18,6 +18,7 @@ enum TreeNodeType {
 	STRUCTUNION, // 结构体或联合体
 	BLOCK, // 代码块
 	EXP, // 表达式
+    IF, // if
 	FOR, // for循环
 	WHILE, // while循环
 	DOWHILE, // do while循环
@@ -326,6 +327,58 @@ private:
     int parse_function(int start_pos, TreeNode **rt) {
         // 只考虑函数声明
     }
+    int parse_if(int start_pos, TreeNode **rt) {
+        assert(lex.lexicals.get_lexical_str(token[start_pos].first) == "if");
+        *rt = new TreeNode();
+        (*rt)->type = IF;
+        (*rt)->token = token[start_pos];
+        int token_ptr = start_pos;
+        token_ptr ++;
+        if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
+            token_ptr ++;
+            TreeNode *node;
+            int off = parse_exp(token_ptr,&node);
+            token_ptr += off;
+            (*rt)->append_ch(node);
+            if (lex.lexicals.get_lexical_str(token[token_ptr].first) == ")") {
+                token_ptr ++;
+                if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
+                    token_ptr ++;
+                    TreeNode *node;
+                    int off = parse_codeblock(token_ptr,&node);
+                    (*rt)->append_ch(node);
+                    if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
+                        token_ptr ++;
+                        if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "else") {
+                            token_ptr ++;
+                            if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
+                                token_ptr ++;
+                                int off = parse_codeblock(token_ptr,&node);
+                                token_ptr += off;
+                                if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
+                                    return token_ptr - start_pos;
+                                }
+                                else {
+                                    assert(false); // TODO: 错误处理
+                                }
+                            }
+                            else {
+                                assert(false); // TODO: 错误处理
+                            }
+                        }
+                        else return token_ptr - start_pos;
+                    }
+                }
+            }
+            else {
+                assert(false); // TODO: 错误处理
+            }
+        }
+        else {
+            assert(false); // TODO: 错误处理
+        }
+        return token_ptr - start_pos;
+    }
     int parse_sentense(int start_pos, TreeNode **rt) {
         string sym_str = lex.lexicals.get_lexical_str(token[start_pos].first);
         if (types.find(sym_str) != types.end() || type_qualifiers.find(sym_str) != type_qualifiers.end()) {
@@ -334,7 +387,8 @@ private:
             return off;
         }
         else if (sym_str == "if") {
-            assert(false); // TODO
+            int off = parse_if(start_pos,rt);
+            return off;
         }
         else if (sym_str == "for") {
             assert(false); // TODO
@@ -510,7 +564,7 @@ private:
             }
         }
         else {
-
+            assert(false); // 这种情况属于程序错误
         }
     }
     int parse_struct_declear(int start_pos, TreeNode **rt) { // 适用于struct和union的定义
