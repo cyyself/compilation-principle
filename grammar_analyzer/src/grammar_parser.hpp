@@ -8,7 +8,7 @@ using std::vector;
 
 enum TreeNodeType {
 	FUNCTIONWITHPARAM, // 函数调用符 函数名(参数,参数2,...)
-    FUNCTION_DECLEAR, // 函数定义
+    FUNCTION_DECLARE, // 函数定义
     QUALIFIERS, // 修饰符
     VARDECLEAERS, // 一组的变量声明
     SINGLEQUALIFIER, // 单个修饰符
@@ -432,7 +432,7 @@ private:
         string sym_str = lex.lexicals.get_lexical_str(token[start_pos].first);
         if (types.find(sym_str) != types.end() || type_qualifiers.find(sym_str) != type_qualifiers.end()) {
             // 按照类型处理
-            int off = parse_symbol_declear(start_pos,rt);
+            int off = parse_symbol_declare(start_pos,rt);
             return off;
         }
         else if (sym_str == "if") {
@@ -505,7 +505,7 @@ private:
         }
         return token_ptr - start_pos;
     }
-    int parse_var_declear(int start_pos, TreeNode **rt, TreeNode *qualifiers, bool allow_multiple = true) { // allow_multiple用于识别函数参数，因为采用的是逗号分隔
+    int parse_var_declare(int start_pos, TreeNode **rt, TreeNode *qualifiers, bool allow_multiple = true) { // allow_multiple用于识别函数参数，因为采用的是逗号分隔
         // 注意：这里不包含修饰符，修饰符作为参数传入
         // example: int *sym1[exp1][exp2], sym2 = exp2;
         // 这里不处理struct/union，这两者用单独函数处理
@@ -583,7 +583,7 @@ private:
         }
         return token_ptr - start_pos;
     }
-    int parse_symbol_declear(int start_pos, TreeNode **rt) {
+    int parse_symbol_declare(int start_pos, TreeNode **rt) {
         // <符号定义> ::= <修饰符> <类型声明>
         // 其中函数定义的识别已经在词法分析阶段检测大括号的方式预处理，因此这里直接使用当时的结果即可避免递归下降法的回溯
         int token_ptr = start_pos;
@@ -609,7 +609,7 @@ private:
                 }
                 else {
                     // 识别为变量，继续处理
-                    return parse_var_declear(ptr_checkpoint,rt,qualifiers);
+                    return parse_var_declare(ptr_checkpoint,rt,qualifiers);
                 }
             }
         }
@@ -617,7 +617,7 @@ private:
             assert(false); // 这种情况属于程序错误
         }
     }
-    int parse_struct_declear(int start_pos, TreeNode **rt) { // 适用于struct和union的定义
+    int parse_struct_declare(int start_pos, TreeNode **rt) { // 适用于struct和union的定义
         // TODO
     }
     /*
