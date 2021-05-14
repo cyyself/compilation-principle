@@ -252,7 +252,13 @@ private:
             }
             else if (token[token_ptr].first == sym_id) {
                 if (lex.symbols.has_suffix(token[token_ptr].second,"func")) {
-                    assert(false);// TODO: 函数调用识别
+                    TreeNode *node;
+                    token_ptr += parse_function_with_param(token_ptr,&node);
+                    if (lastnode == NULL) *rt = lastnode = node;
+                    else {
+                        lastnode->child.push_back(node);
+                        lastnode = node;
+                    }
                 }
                 else {
                     TreeNode *node;
@@ -264,7 +270,6 @@ private:
                     }
                 }
                 last_token_type = VALUE;
-                // TODO: 函数和数组的处理
             }
             else if (token[token_ptr].first == val_id) {
                 TreeNode *node = new TreeNode();
@@ -329,12 +334,39 @@ private:
     }
     int parse_struct(int start_pos, TreeNode **rt) {
         // 考虑分为结构体的使用和结构体的声明
+        // TODO
     }
     int parse_function_with_param(int start_pos, TreeNode **rt) {
-
+        assert(token[start_pos].first == sym_id && lex.symbols.has_suffix(token[start_pos].second,"func"));
+        *rt = new TreeNode();
+        (*rt)->type = FUNCTIONWITHPARAM;
+        (*rt)->token = token[start_pos];
+        int token_ptr = start_pos;
+        token_ptr ++;
+        if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
+            token_ptr ++;
+            while (lex.lexicals.get_lexical_str(token[token_ptr].first) != ")") {
+                TreeNode *node;
+                int off = parse_exp(token_ptr,&node);
+                token_ptr += off;
+                (*rt)->append_ch(node);
+                if (lex.lexicals.get_lexical_str(token[token_ptr].first) == ",") {
+                    token_ptr ++;
+                }
+                else if (lex.lexicals.get_lexical_str(token[token_ptr].first) != ")") {
+                    goto err;
+                }
+            }
+            token_ptr ++;
+        }
+        else goto err;
+        return token_ptr - start_pos;
+        err:
+            assert(false);
     }
     int parse_function(int start_pos, TreeNode **rt) {
         // 只考虑函数声明
+        // TODO
     }
     int parse_if(int start_pos, TreeNode **rt) {
         assert(lex.lexicals.get_lexical_str(token[start_pos].first) == "if");
@@ -349,25 +381,25 @@ private:
             int off = parse_exp(token_ptr,&node);
             token_ptr += off;
             (*rt)->append_ch(node);
-            if (lex.lexicals.get_lexical_str(token[token_ptr].first) == ")") {
+            if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == ")") {
                 token_ptr ++;
-                if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
+                if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
                     token_ptr ++;
                     TreeNode *node;
                     int off = parse_codeblock(token_ptr,&node);
                     (*rt)->append_ch(node);
                     token_ptr += off;
-                    if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
+                    if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
                         token_ptr ++;
-                        if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "else") {
+                        if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "else") {
                             token_ptr ++;
-                            if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
+                            if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
                                 token_ptr ++;
                                 TreeNode *node;
                                 int off = parse_codeblock(token_ptr,&node);
                                 (*rt)->append_ch(node);
                                 token_ptr += off;
-                                if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
+                                if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
                                     token_ptr ++;
                                     return token_ptr - start_pos;
                                 }
@@ -399,21 +431,21 @@ private:
         (*rt)->token = token[start_pos];
         int token_ptr = start_pos;
         token_ptr ++;
-        if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
+        if (token_ptr < token.size() && token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
             token_ptr ++;
             TreeNode *node;
             int off = parse_exp(token_ptr,&node);
             token_ptr += off;
             (*rt)->append_ch(node);
-            if (lex.lexicals.get_lexical_str(token[token_ptr].first) == ")") {
+            if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == ")") {
                 token_ptr ++;
-                if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
+                if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
                     token_ptr ++;
                     TreeNode *node;
                     int off = parse_codeblock(token_ptr,&node);
                     (*rt)->append_ch(node);
                     token_ptr += off;
-                    if (lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
+                    if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "}") {
                         token_ptr ++;
                         return token_ptr - start_pos;
                     }

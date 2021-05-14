@@ -22,10 +22,6 @@ std::set <std::string> keys = std::set <std::string> ({
     "default","sizeof","typedef"
 });
 
-std::set <std::string> builtin_functions = std::set <std::string> ({
-    "getchar","putchar","scanf","printf"
-});
-
 std::set <std::string> ops = std::set <std::string> ({
     "+","-","*","/","<",">","==",
     "!=","<<",">>","++","--","&&",

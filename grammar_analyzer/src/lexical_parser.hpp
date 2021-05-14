@@ -254,9 +254,10 @@ public:
         for (string x : keys) {
             lexicals.insert(x);
         }
-        for (string x : builtin_functions) {
-            lexicals.insert(x);
-        }
+        symbols.insert("void func","get");
+        symbols.insert("void func","put");
+        symbols.insert("void func","scanf");
+        symbols.insert("void func","printf");
         ops_begin = lexicals.size();
         for (string x : ops) {
             lexicals.insert(x);

@@ -8,3 +8,4 @@ else {
 while (a) {
     a --;
 }
+printf("%d%d",a,a);
