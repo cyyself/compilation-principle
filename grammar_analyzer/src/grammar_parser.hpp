@@ -7,25 +7,23 @@ using std::pair;
 using std::vector;
 
 enum TreeNodeType {
-	FUNCTIONWITHPARAM, // 函数调用符 函数名(参数,参数2,...)
-    FUNCTION_DECLARE, // 函数定义
+	FUNCTION_CALL, // 函数调用符 函数名(参数,参数2,...)
+    FUNCTION_DECLARE, // 函数定义，token为函数本身符号名，child顺序是 修饰符,类型,参数(VARDECLEAERS),代码块，其中，类型的token.second为指针级数
+    RETURN, // return 语句
     QUALIFIERS, // 修饰符
     VARDECLEAERS, // 一组的变量声明
     SINGLEQUALIFIER, // 单个修饰符
     SINGLETYPEVAR, // 单个变量的声明，token.first为-1，token.second表示指针级数，child顺序是 修饰符,类型,初始值
 	SINGLEVAR, // 单个变量的声明或使用（包含数组）（不含类型以及修饰符) 本身token表示sym，child依次放入数组
     TYPE, // 定义类型，如果是结构体则先为struct/union则先为struct/union对应的符号，
-	STRUCTUNION, // 结构体或联合体
 	BLOCK, // 代码块
 	EXP, // 表达式
     IF, // if
 	FOR, // for循环
 	WHILE, // while循环
-	DOWHILE, // do while循环
-    OP, // 操作符，保证一定二叉，token.second表示操作符优先级
+    OP, // 操作符，保证一定二叉，token.second表示操作符优先级，对于单结合符号例如指针等存在一个NULL
     SYM, // 符号
     VAL, // 常量
-	TERM //终结符
 };
 
 struct TreeNode {
@@ -289,31 +287,6 @@ private:
         return token_ptr - start_pos;
     }
     /*
-    int parse_function_call(int start_pos) {
-        // <func_symbol> <(> <exp><,> ... <)>
-        if (start_pos + 1 < token.size() && token[start_pos+1].first == lex.lexicals.get_lexical_number("(")) {
-            int off = 2;
-            while (true) {
-                int tmp = parse_exp(off);
-                if (tmp == -1) {
-                    return -1; //后续补错误处理
-                }
-                if (token[start_pos+off+tmp+1].first == lex.lexicals.get_lexical_number(",")) {
-                    off += tmp + 1;
-                }
-                else if (token[start_pos+off+tmp+1].first == lex.lexicals.get_lexical_number(")")) {
-                    off += tmp + 1;
-                    break;
-                }
-                else {
-                    return -1; //后续补错误处理
-                }
-            }
-            return off;
-        }
-    }
-    */
-    /*
     在变量声明前读取修饰符，如const、static等，后续加入到符号表定义中。
     */
     int parse_qualifiers(int start_pos, TreeNode **rt) {
@@ -332,14 +305,10 @@ private:
         }
         return token_ptr - start_pos;
     }
-    int parse_struct(int start_pos, TreeNode **rt) {
-        // 考虑分为结构体的使用和结构体的声明
-        // TODO
-    }
     int parse_function_with_param(int start_pos, TreeNode **rt) {
         assert(token[start_pos].first == sym_id && lex.symbols.has_suffix(token[start_pos].second,"func"));
         *rt = new TreeNode();
-        (*rt)->type = FUNCTIONWITHPARAM;
+        (*rt)->type = FUNCTION_CALL;
         (*rt)->token = token[start_pos];
         int token_ptr = start_pos;
         token_ptr ++;
@@ -363,10 +332,6 @@ private:
         return token_ptr - start_pos;
         err:
             assert(false);
-    }
-    int parse_function(int start_pos, TreeNode **rt) {
-        // 只考虑函数声明
-        // TODO
     }
     int parse_if(int start_pos, TreeNode **rt) {
         assert(lex.lexicals.get_lexical_str(token[start_pos].first) == "if");
@@ -611,9 +576,78 @@ private:
             while (allow_multiple);
         }
         else {
-            assert(false); // TODO: 错误处理
+            assert(false); // 那么程序不应该走到这里，属于程序本身错误
         }
         return token_ptr - start_pos;
+    }
+    int parse_function_declare(int start_pos, TreeNode **rt, TreeNode *qualifiers) {
+        int token_ptr = start_pos;
+        string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first);
+        if (types.find(sym_str) != types.end() && sym_str != "struct" && sym_str != "union") {
+            (*rt) = new TreeNode();
+            (*rt)->type = FUNCTION_DECLARE;
+            pair <int,int> type_token = token[token_ptr];
+            token_ptr ++;
+            int ptr_cnt = 0;
+            while (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "*") { // 检测到指针
+                ptr_cnt ++;
+                token_ptr ++;
+            }
+            type_token.second = ptr_cnt;
+            assert(token_ptr < token.size() && token[token_ptr].first == sym_id);
+            if (qualifiers) {
+                TreeNode *tmpqualifiers = new TreeNode();
+                tree_copy(qualifiers,tmpqualifiers);
+                (*rt)->append_ch(tmpqualifiers);
+            }
+            else {
+                (*rt)->append_ch(NULL);
+            }
+
+            TreeNode *type = new TreeNode();
+            type->type = TYPE;
+            type->token = type_token;
+            (*rt)->append_ch(type);
+
+            if (token[token_ptr].first == sym_id && lex.symbols.has_suffix(token[token_ptr].second,"func")) {
+                (*rt)->token = token[token_ptr];
+                token_ptr ++;
+                if (token[token_ptr].first == lex.lexicals.get_lexical_number("(")) {
+                    token_ptr ++;
+                    TreeNode *params = new TreeNode();
+                    params->type = VARDECLEAERS;
+                    while (token[token_ptr].first != lex.lexicals.get_lexical_number(")")) {
+                        TreeNode *param_qualifiers;
+                        token_ptr += parse_qualifiers(token_ptr,&param_qualifiers);
+                        TreeNode *var_declare;
+                        token_ptr += parse_var_declare(token_ptr,&var_declare,param_qualifiers,false);
+                        params->append_ch(var_declare);
+                    }
+                    token_ptr ++;
+                    if (token[token_ptr].first == lex.lexicals.get_lexical_number("{")) {
+                        token_ptr ++;
+                        TreeNode *codeblock;
+                        token_ptr += parse_codeblock(token_ptr,&codeblock);
+                        (*rt)->append_ch(codeblock);
+                        if (token[token_ptr].first == lex.lexicals.get_lexical_number("}")) {
+                            token_ptr ++;
+                            return token_ptr - start_pos;
+                        }
+                        else goto err;
+                    }
+                    else goto err;
+                }
+                else goto err;
+            }
+            else assert(false); // 那么程序不应该走到这里，属于程序本身错误
+            // TODO: 这个函数写一半
+        }
+        else {
+            assert(false); // 那么程序不应该走到这里，属于程序本身错误
+        }
+        return token_ptr - start_pos;
+    err:
+        assert(false);
     }
     int parse_symbol_declare(int start_pos, TreeNode **rt) {
         // <符号定义> ::= <修饰符> <类型声明>
@@ -624,8 +658,7 @@ private:
         string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first); // 检查类型
         if (types.find(sym_str) != types.end()) {
             if (sym_str == "struct" || sym_str =="union") {
-                assert(qualifiers->child.size() == 0);// TODO: 有时间补一下结构体和联合体要求不能有qualifiers
-                return parse_struct(token_ptr,rt);
+                assert(false); // 不支持的语法
             }
             else {
                 int ptr_checkpoint = token_ptr;
@@ -635,9 +668,8 @@ private:
                     ptr_cnt ++;
                 }
                 if (token_ptr + 1 < token.size() && token[token_ptr+1].first == sym_id && lex.symbols.has_suffix(token[token_ptr+1].second,"func")) {
-                    assert(false);
+                    return parse_function_declare(ptr_checkpoint,rt,qualifiers);
                     // 词法分析阶段识别为了函数，按照函数处理
-                    // TODO
                 }
                 else {
                     // 识别为变量，继续处理
@@ -648,9 +680,6 @@ private:
         else {
             assert(false); // 这种情况属于程序错误
         }
-    }
-    int parse_struct_declare(int start_pos, TreeNode **rt) { // 适用于struct和union的定义
-        // TODO
     }
     /*
     merge_op 用于将符号合并到分析树上
