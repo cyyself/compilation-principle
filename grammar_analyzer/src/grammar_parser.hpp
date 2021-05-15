@@ -824,14 +824,14 @@ private:
     void tree_copy(TreeNode *src, TreeNode *dst) {
         if (src) {
             dst = new TreeNode();
-        }
-        dst->token = src->token;
-        dst->type = src->type;
-        for (auto x : src->child) {
-            TreeNode *newnode = new TreeNode();
-            dst->child.push_back(newnode);
-            newnode->fa = dst;
-            tree_copy(x,newnode);
+            dst->token = src->token;
+            dst->type = src->type;
+            for (auto x : src->child) {
+                TreeNode *newnode = new TreeNode();
+                dst->child.push_back(newnode);
+                newnode->fa = dst;
+                tree_copy(x,newnode);
+            }
         }
     }
 };
