@@ -1,3 +1,9 @@
+int b;
+
+int add(int x, int y) {
+
+}
+
 int main() {
     int a = 1;
     if (a == 1) {

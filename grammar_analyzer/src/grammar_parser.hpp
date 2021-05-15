@@ -616,13 +616,15 @@ private:
                     token_ptr ++;
                     TreeNode *params = new TreeNode();
                     params->type = VARDECLEAERS;
-                    while (token[token_ptr].first != lex.lexicals.get_lexical_number(")")) {
+                    while (token_ptr < token.size() && token[token_ptr].first != lex.lexicals.get_lexical_number(")")) {
                         TreeNode *param_qualifiers;
                         token_ptr += parse_qualifiers(token_ptr,&param_qualifiers);
                         TreeNode *var_declare;
                         token_ptr += parse_var_declare(token_ptr,&var_declare,param_qualifiers,false);
                         params->append_ch(var_declare);
+                        if (token[token_ptr].first == lex.lexicals.get_lexical_number(",")) token_ptr ++;
                     }
+                    (*rt)->append_ch(params);
                     token_ptr ++;
                     if (token[token_ptr].first == lex.lexicals.get_lexical_number("{")) {
                         token_ptr ++;
