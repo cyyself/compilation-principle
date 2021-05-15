@@ -445,6 +445,42 @@ private:
         }
         return token_ptr - start_pos;
     }
+    int parse_for(int start_pos, TreeNode **rt) {
+        int token_ptr = start_pos;
+        assert(token[token_ptr].first == lex.lexicals.get_lexical_number("for"));
+        (*rt) = new TreeNode();
+        (*rt)->type = FOR;
+        (*rt)->token = token[token_ptr];
+        token_ptr ++;
+        if (token[token_ptr].first == lex.lexicals.get_lexical_number("(")) {
+            token_ptr ++;
+            for (int i=0;i<3;i++) {
+                TreeNode *exp;
+                token_ptr += parse_exp(token_ptr,&exp);
+                (*rt)->append_ch(exp);
+                if (i != 2) {
+                    if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number(";")) {
+                        token_ptr ++;
+                    }
+                    else goto err;
+                }
+            }
+            if (token_ptr + 1 < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number(")") && token[token_ptr+1].first == lex.lexicals.get_lexical_number("{")) {
+                token_ptr += 2;
+                TreeNode *codeblock;
+                token_ptr += parse_codeblock(token_ptr,&codeblock);
+                (*rt)->append_ch(codeblock);
+                if (token[token_ptr].first == lex.lexicals.get_lexical_number("}")) {
+                    token_ptr ++;
+                    return token_ptr - start_pos;
+                }
+                else goto err;
+            }
+        }
+        else goto err;
+    err:
+        assert(false);
+    }
     int parse_sentense(int start_pos, TreeNode **rt) {
         string sym_str = lex.lexicals.get_lexical_str(token[start_pos].first);
         if (types.find(sym_str) != types.end() || type_qualifiers.find(sym_str) != type_qualifiers.end()) {
@@ -457,7 +493,8 @@ private:
             return off;
         }
         else if (sym_str == "for") {
-            assert(false); // TODO
+            int off = parse_for(start_pos,rt);
+            return off;
         }
         else if (sym_str == "while") {
             int off = parse_while(start_pos,rt);
