@@ -3,15 +3,19 @@ int main() {
     a = b + 1;
     b = b + b;
     int c = 2;
-    a = (b == c);
-    a = (b > c);
-    a = (b < c);
-    a = (b && c);
-    a = (b || c);
-    a = (!b);
+    {
+        a = (b == c);
+        a = (b > c);
+        a = (b < c);
+    }
+    {
+        a = (b && c);
+        a = (b || c);
+        a = (!b);
+    }
     if (a == b) {
         while (a == b) {
-
+            a ^= b;
         }
     }
     else {

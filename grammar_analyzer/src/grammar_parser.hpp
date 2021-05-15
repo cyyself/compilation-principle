@@ -107,7 +107,7 @@ public:
         init_op_priority();
     }
     void print_tree(TreeNode *tr,int depth = 0, bool no_last = true) {
-        for (int i=0;i<depth;i++) printf("\t");
+        for (int i=0;i<depth;i++) printf("  ");
         if (tr) {
             if (tr->error) {
                 printf("{\"type\":\"ERROR\"}%s\n",no_last?"":",");
@@ -125,7 +125,7 @@ public:
                     for (auto it = tr->child.begin(); it != tr->child.end(); it ++) {
                         print_tree(*it,depth+1,next(it)==tr->child.end());
                     }
-                    for (int i=0;i<depth;i++) printf("\t");
+                    for (int i=0;i<depth;i++) printf("  ");
                     printf("]}%s\n",no_last?"":",");
                 }
                 else {
@@ -138,7 +138,7 @@ public:
         }
     }
     void print_simple_tree(TreeNode *tr,int depth = 0, bool no_last = true) {
-        for (int i=0;i<depth;i++) printf("\t");
+        for (int i=0;i<depth;i++) printf("  ");
         if (tr) {
             if (tr->error) {
                 printf("\"ERROR\"%s\n",no_last?"":",");
@@ -156,7 +156,7 @@ public:
                     for (auto it = tr->child.begin(); it != tr->child.end(); it ++) {
                         print_simple_tree(*it,depth+1,next(it)==tr->child.end());
                     }
-                    for (int i=0;i<depth;i++) printf("\t");
+                    for (int i=0;i<depth;i++) printf("  ");
                     printf("]}%s\n",no_last?"":",");
                 }
                 else {
@@ -628,7 +628,7 @@ private:
         }
         else if (sym_str == "{") {
             off = parse_codeblock(start_pos+1,rt);
-            if (token[start_pos + off].first == lex.lexicals.get_lexical_number("}")) {
+            if (token[start_pos + 1 + off].first == lex.lexicals.get_lexical_number("}")) {
                 return off + 1;
             }
             else goto err;
