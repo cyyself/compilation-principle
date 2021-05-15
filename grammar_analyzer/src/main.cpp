@@ -8,7 +8,6 @@
 char buffer[BUFFER_SIZE];
 
 int main() {
-    freopen("../testcase1.c","r",stdin);
     int ptr = -1;
     do {
         ptr ++;

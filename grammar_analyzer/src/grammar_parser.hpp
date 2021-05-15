@@ -367,7 +367,7 @@ private:
                     token_ptr += parse_function_with_param(token_ptr,&node);
                     if (lastnode == NULL) *rt = lastnode = node;
                     else {
-                        lastnode->child.push_back(node);
+                        lastnode->append_ch(node);
                         lastnode = node;
                     }
                 }
@@ -376,7 +376,7 @@ private:
                     token_ptr += parse_sym_with_array(token_ptr,&node);
                     if (lastnode == NULL) *rt = lastnode = node;
                     else {
-                        lastnode->child.push_back(node);
+                        lastnode->append_ch(node);
                         lastnode = node;
                     }
                 }
@@ -629,7 +629,7 @@ private:
         else if (sym_str == "{") {
             off = parse_codeblock(start_pos+1,rt);
             if (token[start_pos + 1 + off].first == lex.lexicals.get_lexical_number("}")) {
-                return off + 1;
+                return off + 2;
             }
             else goto err;
         }
@@ -802,10 +802,10 @@ private:
             type->token = type_token;
             (*rt)->append_ch(type);
 
-            if (token[token_ptr].first == sym_id && lex.symbols.has_suffix(token[token_ptr].second,"func")) {
+            if (token_ptr < token.size() && token[token_ptr].first == sym_id && lex.symbols.has_suffix(token[token_ptr].second,"func")) {
                 (*rt)->token = token[token_ptr];
                 token_ptr ++;
-                if (token[token_ptr].first == lex.lexicals.get_lexical_number("(")) {
+                if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("(")) {
                     token_ptr ++;
                     TreeNode *params = new TreeNode();
                     params->type = VARDECLEAERS;
@@ -819,12 +819,12 @@ private:
                     }
                     (*rt)->append_ch(params);
                     token_ptr ++;
-                    if (token[token_ptr].first == lex.lexicals.get_lexical_number("{")) {
+                    if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("{")) {
                         token_ptr ++;
                         TreeNode *codeblock = NULL;
                         token_ptr += parse_codeblock(token_ptr,&codeblock);
                         (*rt)->append_ch(codeblock);
-                        if (token[token_ptr].first == lex.lexicals.get_lexical_number("}")) {
+                        if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("}")) {
                             token_ptr ++;
                             return token_ptr - start_pos;
                         }
