@@ -76,6 +76,7 @@ public:
                             upd_name_of_type = true;
                             lexicals.add_count(lexicals.get_lexical_number(tmp));
                             token.emplace_back(lexicals.get_lexical_number(tmp),0);
+                            src_pos.emplace_back(line_number,ptr-linestart);
                         }
                         else {
                             if (name_of_type != "") { // 识别为正在定义符号（注意特殊处理struct和union）
@@ -83,6 +84,7 @@ public:
                                     if (symbols.has_defined(tmp)) {
                                         lexicals.add_count(lexicals.get_lexical_number("sym"));
                                         token.emplace_back(lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
+                                        src_pos.emplace_back(line_number,ptr-linestart);
                                     }
                                     else {
                                         symbol_ready_commit = make_pair(name_of_type,tmp); // 需要等待定义结束再commit
@@ -98,6 +100,7 @@ public:
                                             int inserted_id = symbols.insert(name_of_type+genptr_level(ptr_level),tmp);
                                             lexicals.add_count(lexicals.get_lexical_number("sym"));
                                             token.emplace_back(lexicals.get_lexical_number("sym"),inserted_id);
+                                            src_pos.emplace_back(line_number,ptr-linestart);
                                             last_def_symbol_name = tmp;
                                             upd_name_of_type = true; // 暂时保留类型，处理逗号之后继续定义的情况
                                         }
@@ -115,10 +118,12 @@ public:
                                 if (lexicals.lexical_exist(tmp)) {
                                     lexicals.add_count(lexicals.get_lexical_number(tmp));
                                     token.emplace_back(lexicals.get_lexical_number(tmp),0);
+                                    src_pos.emplace_back(line_number,ptr-linestart);
                                 }
                                 else if (symbols.has_defined(tmp)) {
                                     lexicals.add_count(lexicals.get_lexical_number("sym"));
                                     token.emplace_back(lexicals.get_lexical_number("sym"),symbols.get_symbol_id(tmp));
+                                    src_pos.emplace_back(line_number,ptr-linestart);
                                 }
                                 else {
                                     error_flag = true;
@@ -163,6 +168,7 @@ public:
                                         int inserted_id = symbols.insert(symbol_ready_commit.first,symbol_ready_commit.second);
                                         lexicals.add_count(lexicals.get_lexical_number("sym"));
                                         token.emplace_back(lexicals.get_lexical_number("sym"),inserted_id);
+                                        src_pos.emplace_back(line_number,ptr-linestart);
                                     }
                                     symbol_ready_commit = make_pair(string(""),string(""));
                                 }
@@ -195,6 +201,7 @@ public:
                             }
                             lexicals.add_count(lexicals.get_lexical_number(tmp));
                             token.emplace_back(lexicals.get_lexical_number(tmp),0);
+                            src_pos.emplace_back(line_number,ptr-linestart);
                         }
                     }
                     else if (isdigit(*ptr) || *ptr == '"' || *ptr == '\'') { // 识别数值
@@ -208,6 +215,7 @@ public:
                         int inserted_id = values.insert(string(output_value_type(res.type)),tmp);
                         lexicals.add_count(lexicals.get_lexical_number("val"));
                         token.emplace_back(lexicals.get_lexical_number("val"),inserted_id);
+                        src_pos.emplace_back(line_number,ptr-linestart);
                     }
                     else { // 不匹配任何字符，抛出异常
                         error_flag = true;
@@ -225,6 +233,7 @@ public:
             }
         }
         if (br_curly != 0) errors.raise_error(last_curly_line,last_curly_col,"Bracket didn't match when source code ends.");
+        assert(token.size() == src_pos.size());
         if (error_flag) return empty_vec;
         else return token;
     }
@@ -284,10 +293,15 @@ public:
     value_manager values;
     symbol_manager symbols;
     lexical_manager lexicals;
+    pair <int,int> get_token_pos(int token_id) {
+        if (token_id >= 0 && token_id < src_pos.size()) return src_pos[token_id];
+        else return {-1,-1};
+    }
 private:
     opTrie trie;
     error_manager errors;
     int ops_begin, ops_end;
+    vector <pair<int,int> > src_pos;
     int read_keyword(const char *str) {//start with alpha or _ 
         int offset = 0;
         while (isdigit(*str) || isalpha(*str) || *str == '_') {

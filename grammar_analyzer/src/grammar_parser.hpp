@@ -31,9 +31,11 @@ struct TreeNode {
 	TreeNodeType type;
 	pair<int,int> token; //原始的符号，对于OP，使用second存储优先级
 	vector <TreeNode*> child;
+    bool error;
     TreeNode() {
         fa = NULL;
         token = {-1,0};
+        error = false;
     }
     void append_ch(TreeNode *node) {
         if (node) {
@@ -47,6 +49,7 @@ struct TreeNode {
 class grammar_parser {
 public:
     grammar_parser(const char *_buffer) {
+        errors.init_lines(buffer);
         buffer = _buffer;
         token = lex.parse_lexical(buffer);
         lex.print_result();
@@ -90,6 +93,7 @@ public:
     }
 #endif
 private:
+    error_manager errors;
     const char* buffer;
     vector <pair<int,int> > token;
     lexical_parser lex;
