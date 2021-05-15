@@ -123,9 +123,9 @@ private:
     function parse_exp: 
     解析表达式
 
-    该TreeNode全为OP或SYM或VOL或FUNCTIONCALL
+    该TreeNode全为OP或SYM或VAL或FUNCTION_CALL
 
-    OP为二叉树，一个符号连接两个SYM或VOL或OP或单个NULL（对于单结合的符号，例如i++)
+    OP为二叉树，一个符号连接两个SYM或VAL或OP或单个NULL（对于单结合的符号，例如i++)
     */
     int parse_exp(int start_pos,TreeNode **rt) { // terminal at ,
         int last_op_priority = -1;
@@ -425,6 +425,26 @@ private:
         }
         return token_ptr - start_pos;
     }
+    int parse_return(int start_pos, TreeNode **rt) {
+        int token_ptr = start_pos;
+        assert(token[token_ptr].first == lex.lexicals.get_lexical_number("return"));
+        (*rt) = new TreeNode();
+        (*rt)->type = RETURN;
+        (*rt)->token = token[token_ptr];
+        token_ptr ++;
+        TreeNode *exp;
+        token_ptr += parse_exp(token_ptr,&exp);
+        (*rt)->append_ch(exp);
+        if (token[token_ptr].first == lex.lexicals.get_lexical_number(";")) {
+            token_ptr ++;
+            return token_ptr - start_pos;
+        }
+        else {
+            // TODO: 错误处理
+            assert(false);
+        }
+        return token_ptr - start_pos;
+    }
     int parse_sentense(int start_pos, TreeNode **rt) {
         string sym_str = lex.lexicals.get_lexical_str(token[start_pos].first);
         if (types.find(sym_str) != types.end() || type_qualifiers.find(sym_str) != type_qualifiers.end()) {
@@ -443,8 +463,9 @@ private:
             int off = parse_while(start_pos,rt);
             return off;
         }
-        else if (sym_str == "do") {
-            assert(false); // TODO
+        else if (sym_str == "return") {
+            int off = parse_return(start_pos,rt);
+            return off;
         }
         else {
             int off = parse_exp(start_pos,rt);
