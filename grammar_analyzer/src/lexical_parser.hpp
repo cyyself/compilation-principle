@@ -193,11 +193,6 @@ public:
                             else if (tmp == ";") { // 处理括号匹配 }
                                 ptr_level = 0;
                                 symbol_ready_commit = make_pair(string(""),string(""));
-                                if (br_round != 0 || br_square != 0) {
-                                    errors.raise_error(line_number,ptr-linestart,"bracket didn't match when sentense ends.");
-                                    br_round = 0;
-                                    br_square = 0;
-                                }
                             }
                             lexicals.add_count(lexicals.get_lexical_number(tmp));
                             token.emplace_back(lexicals.get_lexical_number(tmp),0);
@@ -297,9 +292,9 @@ public:
         if (token_id >= 0 && token_id < src_pos.size()) return src_pos[token_id];
         else return {-1,-1};
     }
+    error_manager errors;
 private:
     opTrie trie;
-    error_manager errors;
     int ops_begin, ops_end;
     vector <pair<int,int> > src_pos;
     int read_keyword(const char *str) {//start with alpha or _ 

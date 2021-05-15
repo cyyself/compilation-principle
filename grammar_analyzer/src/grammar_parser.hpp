@@ -1,10 +1,12 @@
 #include "lexical_parser.hpp"
-#include "utility"
+#include <utility>
+#include <algorithm>
 
 using std::get;
 using std::swap;
 using std::pair;
 using std::vector;
+using std::max;
 
 enum TreeNodeType {
 	FUNCTION_CALL, // 函数调用符 函数名(参数,参数2,...)
@@ -38,7 +40,7 @@ struct TreeNode {
         error = false;
     }
     void append_ch(TreeNode *node) {
-        if (node) {
+        if (node && !node->error) {
             assert(node->fa == NULL); // 避免多连接问题
             node->fa = this;
         }
@@ -49,7 +51,7 @@ struct TreeNode {
 class grammar_parser {
 public:
     grammar_parser(const char *_buffer) {
-        errors.init_lines(buffer);
+        errors.init_lines(_buffer);
         buffer = _buffer;
         token = lex.parse_lexical(buffer);
         lex.print_result();
@@ -75,23 +77,37 @@ public:
         }
         init_op_priority();
     }
-#ifdef DEBUG
     void print_tree(TreeNode *tr,int depth = 0) {
         for (int i=0;i<depth;i++) printf("\t");
         if (tr) {
-            printf("(%d,%d)\n",tr->token.first,tr->token.second);
+            printf("(%d,%d",tr->token.first,tr->token.second);
+            if (tr->token.first != -1) {
+                printf(",");
+                if (tr->token.first == sym_id) {
+                    cout << lex.symbols.get_symbol_str(tr->token.second);
+                }
+                else if (tr->token.first == val_id) {
+                    cout << lex.values.get_value_str(tr->token.second);
+                }
+                else {
+                    cout << lex.lexicals.get_lexical_str(tr->token.first);
+                }
+            }
+            printf(")\n");
             for (auto x : tr->child) print_tree(x,depth+1);
         }
         else {
             printf("NULL\n");
         }
     }
-    void test() {
-        TreeNode *tr;
-        parse_codeblock(0,&tr);
-        print_tree(tr);
+    void parse() {
+        if (!lex.errors.has_error()) {
+            TreeNode *tr;
+            parse_codeblock(0,&tr);
+            errors.print_err();
+            print_tree(tr);
+        }
     }
-#endif
 private:
     error_manager errors;
     const char* buffer;
@@ -334,8 +350,11 @@ private:
         }
         else goto err;
         return token_ptr - start_pos;
-        err:
-            assert(false);
+    err:
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"function declare error.");
+        (*rt)->error = true;
+        return max(1,token_ptr - start_pos + 1);
     }
     int parse_if(int start_pos, TreeNode **rt) {
         assert(lex.lexicals.get_lexical_str(token[start_pos].first) == "if");
@@ -372,26 +391,24 @@ private:
                                     token_ptr ++;
                                     return token_ptr - start_pos;
                                 }
-                                else {
-                                    assert(false); // TODO: 错误处理
-                                }
+                                else goto err;
                             }
-                            else {
-                                assert(false); // TODO: 错误处理
-                            }
+                            else goto err;
                         }
                         else return token_ptr - start_pos;
                     }
                 }
+                else goto err;
             }
-            else {
-                assert(false); // TODO: 错误处理
-            }
+            else goto err;
         }
-        else {
-            assert(false); // TODO: 错误处理
-        }
+        else goto err;
         return token_ptr - start_pos;
+    err:
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"if block error.");
+        (*rt)->error = true;
+        return max(1,token_ptr - start_pos + 1);
     }
     int parse_while(int start_pos, TreeNode **rt) {
         assert(lex.lexicals.get_lexical_str(token[start_pos].first) == "while");
@@ -420,14 +437,15 @@ private:
                     }
                 }
             }
-            else {
-                assert(false); // TODO: 错误处理
-            }
+            else goto err;
         }
-        else {
-            assert(false); // TODO: 错误处理
-        }
+        else goto err;
         return token_ptr - start_pos;
+    err:
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"while block error.");
+        (*rt)->error = true;
+        return max(1,token_ptr-start_pos + 1);
     }
     int parse_return(int start_pos, TreeNode **rt) {
         int token_ptr = start_pos;
@@ -443,11 +461,13 @@ private:
             token_ptr ++;
             return token_ptr - start_pos;
         }
-        else {
-            // TODO: 错误处理
-            assert(false);
-        }
+        else goto err;
         return token_ptr - start_pos;
+    err:
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"return didn't ends with ';' .");
+        (*rt)->error = true;
+        return max(1,token_ptr - start_pos + 1);
     }
     int parse_for(int start_pos, TreeNode **rt) {
         int token_ptr = start_pos;
@@ -483,40 +503,54 @@ private:
         }
         else goto err;
     err:
-        assert(false);
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"for block error.");
+        (*rt)->error = true;
+        return max(1,token_ptr - start_pos + 1);
     }
     int parse_sentense(int start_pos, TreeNode **rt) {
         string sym_str = lex.lexicals.get_lexical_str(token[start_pos].first);
+        int off = 0;
         if (types.find(sym_str) != types.end() || type_qualifiers.find(sym_str) != type_qualifiers.end()) {
             // 按照类型处理
-            int off = parse_symbol_declare(start_pos,rt);
+            off = parse_symbol_declare(start_pos,rt);
             return off;
         }
         else if (sym_str == "if") {
-            int off = parse_if(start_pos,rt);
+            off = parse_if(start_pos,rt);
             return off;
         }
         else if (sym_str == "for") {
-            int off = parse_for(start_pos,rt);
+            off = parse_for(start_pos,rt);
             return off;
         }
         else if (sym_str == "while") {
-            int off = parse_while(start_pos,rt);
+            off = parse_while(start_pos,rt);
             return off;
         }
         else if (sym_str == "return") {
-            int off = parse_return(start_pos,rt);
+            off = parse_return(start_pos,rt);
             return off;
         }
+        else if (sym_str == "{") {
+            off = parse_codeblock(start_pos+1,rt);
+            if (token[start_pos + off].first == lex.lexicals.get_lexical_number("}")) {
+                return off + 1;
+            }
+            else goto err;
+        }
         else {
-            int off = parse_exp(start_pos,rt);
+            off = parse_exp(start_pos,rt);
             if (token[start_pos + off].first == lex.lexicals.get_lexical_number(";")) {
                 return off + 1;
             }
-            else {
-                assert(false); // TODO: 错误处理
-            }
+            else goto err;
         }
+    err:
+        pair <int,int> token_pos = lex.get_token_pos(start_pos + off);
+        errors.raise_error(token_pos.first,token_pos.second,"parse sentense failed.");
+        (*rt)->error = true;
+        return max(1,off + 1);
     }
     int parse_codeblock(int start_pos, TreeNode **rt) {
         int token_ptr = start_pos;
@@ -525,15 +559,18 @@ private:
         while (token_ptr < token.size() && token[token_ptr].first != lex.lexicals.get_lexical_number("}")) {
             TreeNode *node;
             int off = parse_sentense(token_ptr,&node);
-            if (off == 0) {
-                assert(false); // TODO: 错误处理
-            }
+            if (off == 0) goto err;
             else {
                 token_ptr += off;
                 (*rt)->append_ch(node);
             }
         }
         return token_ptr - start_pos;
+    err:
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"unable to parse sentense .");
+        (*rt)->error = true;
+        return max(1,token_ptr - start_pos);
     }
     int parse_sym_with_array(int start_pos, TreeNode **rt) {
         // sym[exp1][exp2]....
@@ -553,16 +590,16 @@ private:
                     (*rt)->append_ch(exp);
                     token_ptr ++;
                 }
-                else {
-                    assert(false);
-                    // TODO: 错误处理
-                }
+                else goto err;
             }
         }
-        else {
-            assert("false"); // 说明语法分析器有问题
-        }
+        else goto err;
         return token_ptr - start_pos;
+    err:
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"unable to parse sym with array.");
+        (*rt)->error = true;
+        return max(1,token_ptr - start_pos + 1);
     }
     int parse_var_declare(int start_pos, TreeNode **rt, TreeNode *qualifiers, bool allow_multiple = true) { // allow_multiple用于识别函数参数，因为采用的是逗号分隔
         // 注意：这里不包含修饰符，修饰符作为参数传入
@@ -704,14 +741,16 @@ private:
                 else goto err;
             }
             else assert(false); // 那么程序不应该走到这里，属于程序本身错误
-            // TODO: 这个函数写一半
         }
         else {
             assert(false); // 那么程序不应该走到这里，属于程序本身错误
         }
         return token_ptr - start_pos;
     err:
-        assert(false);
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"function declare error .");
+        (*rt)->error = true;
+        return max(1,token_ptr - start_pos);
     }
     int parse_symbol_declare(int start_pos, TreeNode **rt) {
         // <符号定义> ::= <修饰符> <类型声明>

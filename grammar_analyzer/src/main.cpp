@@ -17,6 +17,6 @@ int main() {
     while (buffer[ptr] != EOF);
     buffer[ptr] = 0; // replace EOF to 0
     grammar_parser parser(buffer);
-    parser.test();
+    parser.parse();
 	return 0;
 }

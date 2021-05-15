@@ -61,6 +61,9 @@ public:
     int getfilesize() {
         return filesize;
     }
+    bool has_error() {
+        return errors.size() != 0;
+    }
 private:
     vector<tuple<int,int,string> > errors;
     vector<string> lines;

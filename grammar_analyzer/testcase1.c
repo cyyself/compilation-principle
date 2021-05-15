@@ -11,9 +11,7 @@ int main() {
         sum += i;
     }
     int a = 1;
-    if (a == 1) {
-        ++a;
-    }
+    if (a == 1) 
     else {
         a--;
         if (a == 0) {
