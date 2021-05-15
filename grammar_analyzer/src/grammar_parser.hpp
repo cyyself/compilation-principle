@@ -10,20 +10,20 @@ using std::max;
 
 enum TreeNodeType {
     DEFAULT,
-	FUNCTION_CALL, // 函数调用符 函数名(参数,参数2,...)
-    FUNCTION_DECLARE, // 函数定义，token为函数本身符号名，child顺序是 修饰符,类型,参数(VARDECLEAERS),代码块，其中，类型的token.second为指针级数
+    FUNCTION_CALL, // 函数调用符 函数名(参数,参数2,...)
+    FUNCTION_DECLARE, // 函数定义，token为函数本身符号名，child顺序是 修饰符,类型,参数(VARDECLEAERS),代码块，其中，类型的token.second为指针级数
     RETURN, // return 语句
     QUALIFIERS, // 修饰符
     VARDECLEAERS, // 一组的变量声明
     SINGLEQUALIFIER, // 单个修饰符
     SINGLETYPEVAR, // 单个变量的声明，token.first为-1，token.second表示指针级数，child顺序是 修饰符,类型,初始值
-	SINGLEVAR, // 单个变量的声明或使用（包含数组）（不含类型以及修饰符) 本身token表示sym，child依次放入数组
+    SINGLEVAR, // 单个变量的声明或使用（包含数组）（不含类型以及修饰符) 本身token表示sym，child依次放入数组
     TYPE, // 定义类型，如果是结构体则先为struct/union则先为struct/union对应的符号，
-	BLOCK, // 代码块
-	EXP, // 表达式
+    BLOCK, // 代码块
+    EXP, // 表达式
     IF, // if
-	FOR, // for循环
-	WHILE, // while循环
+    FOR, // for循环
+    WHILE, // while循环
     OP, // 操作符，保证一定二叉，token.second表示操作符优先级，对于单结合符号例如指针等存在一个NULL
     SYM, // 符号
     VAL // 常量
@@ -31,9 +31,9 @@ enum TreeNodeType {
 
 struct TreeNode {
     TreeNode *fa;
-	TreeNodeType type;
-	pair<int,int> token; //原始的符号，对于OP，使用second存储优先级
-	vector <TreeNode*> child;
+    TreeNodeType type;
+    pair<int,int> token; //原始的符号，对于OP，使用second存储优先级
+    vector <TreeNode*> child;
     bool error;
     TreeNode() {
         fa = NULL;
