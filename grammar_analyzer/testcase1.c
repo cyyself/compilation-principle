@@ -1,28 +1,22 @@
-int b;
-
-int add(int x, int y) {
-    return x+y;
-}
-
 int main() {
-    int i;
-    int sum = 0;
-    for (i=1;i<=10;i++) {
-        sum += i;
+    int a,b = 1;
+    a = b + 1;
+    b = b + b;
+    int c = 2;
+    a = (b == c);
+    a = (b > c);
+    a = (b < c);
+    a = (b && c);
+    a = (b || c);
+    a = (!b);
+    if (a == b) {
+        while (a == b) {
+
+        }
     }
-    int a = 1;
-    if (a == 1) 
     else {
-        a--;
-        if (a == 0) {
-            printf("ok");
-        }
-        else {
-            printf("error");
-        }
+        get(a);
+        put(a);
     }
-    while (a) {
-        a --;
-    }
-    printf("%d%d",a,a);
+    return 0;
 }

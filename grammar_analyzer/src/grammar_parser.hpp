@@ -9,6 +9,7 @@ using std::vector;
 using std::max;
 
 enum TreeNodeType {
+    DEFAULT,
 	FUNCTION_CALL, // 函数调用符 函数名(参数,参数2,...)
     FUNCTION_DECLARE, // 函数定义，token为函数本身符号名，child顺序是 修饰符,类型,参数(VARDECLEAERS),代码块，其中，类型的token.second为指针级数
     RETURN, // return 语句
@@ -25,7 +26,7 @@ enum TreeNodeType {
 	WHILE, // while循环
     OP, // 操作符，保证一定二叉，token.second表示操作符优先级，对于单结合符号例如指针等存在一个NULL
     SYM, // 符号
-    VAL, // 常量
+    VAL // 常量
 };
 
 struct TreeNode {
@@ -36,6 +37,7 @@ struct TreeNode {
     bool error;
     TreeNode() {
         fa = NULL;
+        type = DEFAULT;
         token = {-1,0};
         error = false;
     }
@@ -45,6 +47,33 @@ struct TreeNode {
             node->fa = this;
         }
         child.push_back(node);
+    }
+    const char* type_s() {
+        switch (type) {
+#define str(x) #x
+            case DEFAULT: return str(DEFAULT);
+            case FUNCTION_CALL: return str(FUNCTION_CALL);
+            case FUNCTION_DECLARE: return str(FUNCTION_DECLARE);
+            case RETURN: return str(RETURN);
+            case QUALIFIERS: return str(QUALIFIERS);
+            case VARDECLEAERS: return str(VARDECLEAERS);
+            case SINGLEQUALIFIER: return str(SINGLEQUALIFIER);
+            case SINGLETYPEVAR: return str(SINGLETYPEVAR);
+            case SINGLEVAR: return str(SINGLEVAR);
+            case TYPE: return str(TYPE);
+            case BLOCK: return str(BLOCK);
+            case EXP: return str(EXP);
+            case IF: return str(IF);
+            case FOR: return str(FOR);
+            case WHILE: return str(WHILE);
+            case OP: return str(OP);
+            case SYM: return str(SYM);
+            case VAL: return str(VAL);
+            default:
+                assert(false);
+#undef str
+        }
+        
     }
 };
 
@@ -77,35 +106,82 @@ public:
         }
         init_op_priority();
     }
-    void print_tree(TreeNode *tr,int depth = 0) {
+    void print_tree(TreeNode *tr,int depth = 0, bool no_last = true) {
         for (int i=0;i<depth;i++) printf("\t");
         if (tr) {
-            printf("(%d,%d",tr->token.first,tr->token.second);
-            if (tr->token.first != -1) {
-                printf(",");
-                if (tr->token.first == sym_id) {
-                    cout << lex.symbols.get_symbol_str(tr->token.second);
+            if (tr->error) {
+                printf("{\"type\":\"ERROR\"}%s\n",no_last?"":",");
+            }
+            else {
+                printf("{\"type\":\"%s\",\"token\":[%d,%d],\"lex\":",tr->type_s(),tr->token.first,tr->token.second);
+                if (tr->token.first != -1) {
+                    if (tr->token.first == sym_id) cout << '"' << lex.symbols.get_symbol_str(tr->token.second) << '"';
+                    else if (tr->token.first == val_id) cout << lex.values.get_value_str(tr->token.second);
+                    else cout << '"' << lex.lexicals.get_lexical_str(tr->token.first) << '"';
                 }
-                else if (tr->token.first == val_id) {
-                    cout << lex.values.get_value_str(tr->token.second);
+                else printf("\"NULL\"");
+                if (tr->child.size()) {
+                    printf(",\"child\":[\n");
+                    for (auto it = tr->child.begin(); it != tr->child.end(); it ++) {
+                        print_tree(*it,depth+1,next(it)==tr->child.end());
+                    }
+                    for (int i=0;i<depth;i++) printf("\t");
+                    printf("]}%s\n",no_last?"":",");
                 }
                 else {
-                    cout << lex.lexicals.get_lexical_str(tr->token.first);
+                    printf("}%s\n",no_last?"":",");
                 }
             }
-            printf(")\n");
-            for (auto x : tr->child) print_tree(x,depth+1);
         }
         else {
-            printf("NULL\n");
+            printf("{\"type\":\"NULL\"}%s\n",no_last?"":",");
+        }
+    }
+    void print_simple_tree(TreeNode *tr,int depth = 0, bool no_last = true) {
+        for (int i=0;i<depth;i++) printf("\t");
+        if (tr) {
+            if (tr->error) {
+                printf("\"ERROR\"%s\n",no_last?"":",");
+            }
+            else {
+                if (tr->child.size()) {
+                    printf("{");
+                    if (tr->token.first != -1) {
+                        if (tr->token.first == sym_id) cout << '"' << lex.symbols.get_symbol_str(tr->token.second) << '"';
+                        else if (tr->token.first == val_id) cout << lex.values.get_value_str(tr->token.second);
+                        else cout << '"' << lex.lexicals.get_lexical_str(tr->token.first) << '"';
+                    }
+                    else printf("\"%s\"",tr->type_s());
+                    printf(":[\n");
+                    for (auto it = tr->child.begin(); it != tr->child.end(); it ++) {
+                        print_simple_tree(*it,depth+1,next(it)==tr->child.end());
+                    }
+                    for (int i=0;i<depth;i++) printf("\t");
+                    printf("]}%s\n",no_last?"":",");
+                }
+                else {
+                    if (tr->token.first != -1) {
+                        if (tr->token.first == sym_id) cout << '"' << lex.symbols.get_symbol_str(tr->token.second) << '"';
+                        else if (tr->token.first == val_id) cout << lex.values.get_value_str(tr->token.second);
+                        else cout << '"' << lex.lexicals.get_lexical_str(tr->token.first) << '"';
+                        printf("%s\n",no_last?"":",");
+                    }
+                    else printf("\"%s\"%s\n",tr->type_s(),no_last?"":",");
+                }
+            }
+        }
+        else {
+            printf("{\"NULL\":[]}%s\n",no_last?"":",");
         }
     }
     void parse() {
         if (!lex.errors.has_error()) {
-            TreeNode *tr;
+            TreeNode *tr = NULL;
             parse_codeblock(0,&tr);
             errors.print_err();
-            print_tree(tr);
+            printf("------ GRAMMAR ANALYZED TREE BEGIN -----\n");
+            print_simple_tree(tr);
+            printf("------ GRAMMAR ANALYZED TREE  END  -----\n");
         }
     }
 private:
@@ -160,13 +236,30 @@ private:
             // 不需要特殊处理括号，因为符号表中已完成函数调用的识别，直接使用函数调用的parse函数处理
             // 暂时不对指针进行处理
             string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first);
-            if (sym_str == "(") {
+            if (sym_str == "~" || sym_str == "!" || sym_str == "sizeof") {
+                int cur_priority = 2;
+                TreeNode *node = new TreeNode();
+                node->fa = lastnode;
+                node->type = OP;
+                node->token = {token[token_ptr].first,cur_priority};
+                node->child.push_back(NULL);
+                if (lastnode == NULL) *rt = lastnode = node;
+                else {
+                    lastnode->child.push_back(node);
+                    lastnode = node;
+                }
+                last_op_priority = cur_priority;
+                last_token_type = OPERATOR;
+                token_ptr ++;
+            }
+            else if (sym_str == "(") {
                 TreeNode *node;
-                int off = parse_exp(token_ptr + 1,&node);
+                token_ptr ++;
+                int off = parse_exp(token_ptr,&node);
                 token_ptr += off;
-                sym_str = lex.lexicals.get_lexical_str(token[token_ptr+1].first);
+                sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first);
                 if (sym_str == ")") {
-                    token_ptr += 2;
+                    token_ptr ++;
                 }
                 else {
                     assert(false);
@@ -241,7 +334,6 @@ private:
                     merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as);
                     last_token_type = OPERATOR;
                     last_op_priority = cur_priority;
-                    token_ptr ++;
                 }
                 else {
                     // 当做指针，右结合
@@ -259,6 +351,7 @@ private:
                     last_op_priority = cur_priority;
                     last_token_type = OPERATOR;
                 }
+                token_ptr ++;
             }
             else if (op_priority.find(token[token_ptr].first) != op_priority.end()) {
                 int cur_priority = op_priority[token[token_ptr].first].first;
@@ -270,7 +363,7 @@ private:
             }
             else if (token[token_ptr].first == sym_id) {
                 if (lex.symbols.has_suffix(token[token_ptr].second,"func")) {
-                    TreeNode *node;
+                    TreeNode *node = NULL;
                     token_ptr += parse_function_with_param(token_ptr,&node);
                     if (lastnode == NULL) *rt = lastnode = node;
                     else {
@@ -279,7 +372,7 @@ private:
                     }
                 }
                 else {
-                    TreeNode *node;
+                    TreeNode *node = NULL;
                     token_ptr += parse_sym_with_array(token_ptr,&node);
                     if (lastnode == NULL) *rt = lastnode = node;
                     else {
@@ -322,6 +415,7 @@ private:
             node->type = SINGLEQUALIFIER;
             (*rt)->append_ch(node);
             token_ptr ++;
+            sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first);
         }
         return token_ptr - start_pos;
     }
@@ -365,7 +459,7 @@ private:
         token_ptr ++;
         if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
             token_ptr ++;
-            TreeNode *node;
+            TreeNode *node = NULL;
             int off = parse_exp(token_ptr,&node);
             token_ptr += off;
             (*rt)->append_ch(node);
@@ -373,7 +467,7 @@ private:
                 token_ptr ++;
                 if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
                     token_ptr ++;
-                    TreeNode *node;
+                    TreeNode *node = NULL;
                     int off = parse_codeblock(token_ptr,&node);
                     (*rt)->append_ch(node);
                     token_ptr += off;
@@ -383,7 +477,7 @@ private:
                             token_ptr ++;
                             if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
                                 token_ptr ++;
-                                TreeNode *node;
+                                TreeNode *node = NULL;
                                 int off = parse_codeblock(token_ptr,&node);
                                 (*rt)->append_ch(node);
                                 token_ptr += off;
@@ -419,7 +513,7 @@ private:
         token_ptr ++;
         if (token_ptr < token.size() && token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
             token_ptr ++;
-            TreeNode *node;
+            TreeNode *node = NULL;
             int off = parse_exp(token_ptr,&node);
             token_ptr += off;
             (*rt)->append_ch(node);
@@ -427,7 +521,7 @@ private:
                 token_ptr ++;
                 if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
                     token_ptr ++;
-                    TreeNode *node;
+                    TreeNode *node = NULL;
                     int off = parse_codeblock(token_ptr,&node);
                     (*rt)->append_ch(node);
                     token_ptr += off;
@@ -454,7 +548,7 @@ private:
         (*rt)->type = RETURN;
         (*rt)->token = token[token_ptr];
         token_ptr ++;
-        TreeNode *exp;
+        TreeNode *exp = NULL;
         token_ptr += parse_exp(token_ptr,&exp);
         (*rt)->append_ch(exp);
         if (token[token_ptr].first == lex.lexicals.get_lexical_number(";")) {
@@ -479,7 +573,7 @@ private:
         if (token[token_ptr].first == lex.lexicals.get_lexical_number("(")) {
             token_ptr ++;
             for (int i=0;i<3;i++) {
-                TreeNode *exp;
+                TreeNode *exp = NULL;
                 token_ptr += parse_exp(token_ptr,&exp);
                 (*rt)->append_ch(exp);
                 if (i != 2) {
@@ -557,7 +651,7 @@ private:
         *rt = new TreeNode();
         (*rt)->type = BLOCK;
         while (token_ptr < token.size() && token[token_ptr].first != lex.lexicals.get_lexical_number("}")) {
-            TreeNode *node;
+            TreeNode *node = NULL;
             int off = parse_sentense(token_ptr,&node);
             if (off == 0) goto err;
             else {
@@ -583,7 +677,7 @@ private:
             while (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("[")) {
                 // 检测到数组声明
                 token_ptr ++;
-                TreeNode *exp;
+                TreeNode *exp = NULL;
                 int off = parse_exp(token_ptr,&exp);
                 token_ptr += off;
                 if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("]")) {
@@ -652,7 +746,7 @@ private:
 
                     if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("=")) { // 处理初始化
                         token_ptr ++;
-                        TreeNode *value;
+                        TreeNode *value = NULL;
                         int off = parse_exp(token_ptr,&value);
                         token_ptr += off;
                         thisnode->append_ch(value);
@@ -716,9 +810,9 @@ private:
                     TreeNode *params = new TreeNode();
                     params->type = VARDECLEAERS;
                     while (token_ptr < token.size() && token[token_ptr].first != lex.lexicals.get_lexical_number(")")) {
-                        TreeNode *param_qualifiers;
+                        TreeNode *param_qualifiers = NULL;
                         token_ptr += parse_qualifiers(token_ptr,&param_qualifiers);
-                        TreeNode *var_declare;
+                        TreeNode *var_declare = NULL;
                         token_ptr += parse_var_declare(token_ptr,&var_declare,param_qualifiers,false);
                         params->append_ch(var_declare);
                         if (token[token_ptr].first == lex.lexicals.get_lexical_number(",")) token_ptr ++;
@@ -727,7 +821,7 @@ private:
                     token_ptr ++;
                     if (token[token_ptr].first == lex.lexicals.get_lexical_number("{")) {
                         token_ptr ++;
-                        TreeNode *codeblock;
+                        TreeNode *codeblock = NULL;
                         token_ptr += parse_codeblock(token_ptr,&codeblock);
                         (*rt)->append_ch(codeblock);
                         if (token[token_ptr].first == lex.lexicals.get_lexical_number("}")) {
@@ -756,7 +850,7 @@ private:
         // <符号定义> ::= <修饰符> <类型声明>
         // 其中函数定义的识别已经在词法分析阶段检测大括号的方式预处理，因此这里直接使用当时的结果即可避免递归下降法的回溯
         int token_ptr = start_pos;
-        TreeNode *qualifiers;
+        TreeNode *qualifiers = NULL;
         token_ptr += parse_qualifiers(token_ptr,&qualifiers);
         string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first); // 检查类型
         if (types.find(sym_str) != types.end()) {
@@ -862,7 +956,6 @@ private:
     }
     void tree_copy(TreeNode *src, TreeNode *dst) {
         if (src) {
-            dst = new TreeNode();
             dst->token = src->token;
             dst->type = src->type;
             for (auto x : src->child) {
