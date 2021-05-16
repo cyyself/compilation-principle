@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import ete3,json,sys
+import ete3,json
 
 def read_json():
 	s = ""
