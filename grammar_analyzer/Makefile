@@ -5,26 +5,26 @@ grammar_analyzer: src/*
 test1: grammar_analyzer testcase1.c plot.py
 	@echo "Testing Testcase1.c"
 	@./grammar_analyzer < testcase1.c > tmp.txt
-	cat tmp.txt
+	@cat tmp.txt
 	@python3 plot.py < tmp.txt
 
 
 test2: grammar_analyzer testcase2.c plot.py
 	@echo "Testing Testcase2.c"
 	@./grammar_analyzer < testcase2.c > tmp.txt
-	cat tmp.txt
+	@cat tmp.txt
 	@python3 plot.py < tmp.txt
 
 test3: grammar_analyzer testcase3.c plot.py
 	@echo "Testing Testcase3.c"
 	@./grammar_analyzer < testcase3.c > tmp.txt
-	cat tmp.txt
+	@cat tmp.txt
 	@python3 plot.py < tmp.txt
 
 test4: grammar_analyzer testcase4.c plot.py
 	@echo "Testing Testcase4.c"
 	@./grammar_analyzer < testcase4.c > tmp.txt
-	cat tmp.txt
+	@cat tmp.txt
 	@python3 plot.py < tmp.txt
 
 clean:
