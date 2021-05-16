@@ -16,7 +16,7 @@ enum TreeNodeType {
     QUALIFIERS, // 修饰符
     VARDECLEAERS, // 一组的变量声明
     SINGLEQUALIFIER, // 单个修饰符
-    SINGLETYPEVAR, // 单个变量的声明，token.first为-1，token.second表示指针级数，child顺序是 修饰符,类型,初始值
+    SINGLETYPEVAR, // 单个变量的声明，token.first为-1，token.second表示指针级数，child顺序是 修饰符,类型,符号,初始值
     SINGLEVAR, // 单个变量的声明或使用（包含数组）（不含类型以及修饰符) 本身token表示sym，child依次放入数组
     TYPE, // 定义类型，如果是结构体则先为struct/union则先为struct/union对应的符号，
     BLOCK, // 代码块
