@@ -1,3 +1,7 @@
+struct DATA {
+    int dataa,datab;
+    int asdf,qwer;
+}
 int main() {
     int a,b = 1;
     a = b + 1;

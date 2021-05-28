@@ -12,7 +12,7 @@ std::set <std::string> types = std::set <std::string>({
     "void","int","long","short",
     "float","double","char",
     "unsigned","signed","struct",
-    "union","auto","enum"
+    "union","auto","enum","bool"
 });
 
 std::set <std::string> keys = std::set <std::string> ({
@@ -30,6 +30,11 @@ std::set <std::string> ops = std::set <std::string> ({
     "/=","<<=",">>=","&=","|=","^=",
     ".","%","%=","->"
 });
+
+std::set <std::string> must_bool_ops = std::set <std::string>({
+    "&&","||","!"
+});
+
 
 std::set <char> control_ops = std::set<char> ({
     ',',';'

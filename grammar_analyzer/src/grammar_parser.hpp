@@ -18,6 +18,7 @@ enum TreeNodeType {
     SINGLEQUALIFIER, // 单个修饰符
     SINGLETYPEVAR, // 单个变量的声明，token.first为-1，token.second表示指针级数，child顺序是 修饰符,类型,符号,初始值
     SINGLEVAR, // 单个变量的声明或使用（包含数组）（不含类型以及修饰符) 本身token表示sym，child依次放入数组
+    TYPEDECLEARES, // 类型的定义，token本身为所定义类型的记号，第一子节点为struct或union的记号，之后的子节点按照SINGLETYPEVAR定义。
     TYPE, // 定义类型，如果是结构体则先为struct/union则先为struct/union对应的符号，
     BLOCK, // 代码块
     EXP, // 表达式
@@ -29,17 +30,30 @@ enum TreeNodeType {
     VAL // 常量
 };
 
+enum result_type {
+    DEFAULT_TYPE,
+    INT,
+    BOOL,
+    PTR,
+    STR,
+    CHAR
+};
+
 struct TreeNode {
     TreeNode *fa;
     TreeNodeType type;
     pair<int,int> token; //原始的符号，对于OP，使用second存储优先级
     vector <TreeNode*> child;
+    int token_pos; // 记录记号在源程序中的位置，用于错误信息的输出
+    result_type rtype;
     bool error;
     TreeNode() {
         fa = NULL;
         type = DEFAULT;
         token = {-1,0};
         error = false;
+        rtype = DEFAULT_TYPE;
+        token_pos = -1;
     }
     void append_ch(TreeNode *node) {
         if (node && !node->error) {
@@ -242,6 +256,7 @@ private:
                 node->fa = lastnode;
                 node->type = OP;
                 node->token = {token[token_ptr].first,cur_priority};
+                node->token_pos = token_ptr;
                 node->child.push_back(NULL);
                 if (lastnode == NULL) *rt = lastnode = node;
                 else {
@@ -277,7 +292,7 @@ private:
                     int cur_priority = 4;
                     bool cur_as = false;
                     bool dir = false;
-                    merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as);
+                    merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as,token_ptr);
                     last_op_priority = cur_priority;
                     last_token_type = OPERATOR;
                 }
@@ -290,6 +305,7 @@ private:
                         node->fa = lastnode->fa;
                         node->type = OP;
                         node->token = {token[token_ptr].first,cur_priority};
+                        node->token_pos = token_ptr;
                         node->child.push_back(lastnode);
                         node->child.push_back(NULL);
                         if (lastnode->fa) {
@@ -314,6 +330,7 @@ private:
                         node->fa = lastnode;
                         node->type = OP;
                         node->token = {token[token_ptr].first,cur_priority};
+                        node->token_pos = token_ptr;
                         node->child.push_back(NULL);
                         if (lastnode == NULL) *rt = lastnode = node;
                         else {
@@ -331,7 +348,7 @@ private:
                     // 不当做指针
                     int cur_priority = (sym_str == "*") ? 3 : 8;
                     bool cur_as = false;
-                    merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as);
+                    merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as,token_ptr);
                     last_token_type = OPERATOR;
                     last_op_priority = cur_priority;
                 }
@@ -342,6 +359,7 @@ private:
                     node->fa = lastnode;
                     node->type = OP;
                     node->token = {token[token_ptr].first,cur_priority};
+                    node->token_pos = token_ptr;
                     node->child.push_back(NULL);
                     if (lastnode == NULL) *rt = lastnode = node;
                     else {
@@ -356,7 +374,7 @@ private:
             else if (op_priority.find(token[token_ptr].first) != op_priority.end()) {
                 int cur_priority = op_priority[token[token_ptr].first].first;
                 bool cur_as = op_priority[token[token_ptr].first].second;
-                merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as);
+                merge_op(rt,&lastnode,token[token_ptr],last_op_priority,cur_priority,cur_as,token_ptr);
                 last_token_type = OPERATOR;
                 last_op_priority = cur_priority;
                 token_ptr ++;
@@ -387,6 +405,7 @@ private:
                 node->fa = lastnode;
                 node->type = VAL;
                 node->token = token[token_ptr];
+                node->token_pos = token_ptr;
                 if (lastnode == NULL) *rt = lastnode = node;
                 else {
                     lastnode->child.push_back(node);
@@ -412,6 +431,7 @@ private:
         while (token_ptr < token.size() && type_qualifiers.find(sym_str) != type_qualifiers.end()) {
             TreeNode *node = new TreeNode();
             node->token = token[token_ptr];
+            node->token_pos = token_ptr;
             node->type = SINGLEQUALIFIER;
             (*rt)->append_ch(node);
             token_ptr ++;
@@ -424,6 +444,7 @@ private:
         *rt = new TreeNode();
         (*rt)->type = FUNCTION_CALL;
         (*rt)->token = token[start_pos];
+        (*rt)->token_pos = start_pos;
         int token_ptr = start_pos;
         token_ptr ++;
         if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
@@ -455,6 +476,7 @@ private:
         *rt = new TreeNode();
         (*rt)->type = IF;
         (*rt)->token = token[start_pos];
+        (*rt)->token_pos = start_pos;
         int token_ptr = start_pos;
         token_ptr ++;
         if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
@@ -509,6 +531,7 @@ private:
         *rt = new TreeNode();
         (*rt)->type = WHILE;
         (*rt)->token = token[start_pos];
+        (*rt)->token_pos = start_pos;
         int token_ptr = start_pos;
         token_ptr ++;
         if (token_ptr < token.size() && token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "(") {
@@ -547,6 +570,7 @@ private:
         (*rt) = new TreeNode();
         (*rt)->type = RETURN;
         (*rt)->token = token[token_ptr];
+        (*rt)->token_pos = token_ptr;
         token_ptr ++;
         TreeNode *exp = NULL;
         token_ptr += parse_exp(token_ptr,&exp);
@@ -569,6 +593,7 @@ private:
         (*rt) = new TreeNode();
         (*rt)->type = FOR;
         (*rt)->token = token[token_ptr];
+        (*rt)->token_pos = token_ptr;
         token_ptr ++;
         if (token[token_ptr].first == lex.lexicals.get_lexical_number("(")) {
             token_ptr ++;
@@ -650,6 +675,7 @@ private:
         int token_ptr = start_pos;
         *rt = new TreeNode();
         (*rt)->type = BLOCK;
+        (*rt)->token_pos = start_pos - 1;
         while (token_ptr < token.size() && token[token_ptr].first != lex.lexicals.get_lexical_number("}")) {
             TreeNode *node = NULL;
             int off = parse_sentense(token_ptr,&node);
@@ -673,6 +699,7 @@ private:
             *rt = new TreeNode();
             (*rt)->type = SINGLEVAR;
             (*rt)->token = token[start_pos];
+            (*rt)->token_pos = start_pos;
             token_ptr ++;
             while (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("[")) {
                 // 检测到数组声明
@@ -796,14 +823,13 @@ private:
             else {
                 (*rt)->append_ch(NULL);
             }
-
             TreeNode *type = new TreeNode();
             type->type = TYPE;
             type->token = type_token;
             (*rt)->append_ch(type);
-
             if (token_ptr < token.size() && token[token_ptr].first == sym_id && lex.symbols.has_suffix(token[token_ptr].second,"func")) {
                 (*rt)->token = token[token_ptr];
+                (*rt)->token_pos = token_ptr;
                 token_ptr ++;
                 if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number("(")) {
                     token_ptr ++;
@@ -846,6 +872,33 @@ private:
         (*rt)->error = true;
         return max(1,token_ptr - start_pos);
     }
+    int parse_struct_declare(int start_pos, TreeNode **rt) {
+        int token_ptr = start_pos;
+        (*rt) = new TreeNode;
+        (*rt)->type = TYPEDECLEARES;
+        (*rt)->token = token[token_ptr+1];
+        (*rt)->token_pos = token_ptr;
+        TreeNode *type = new TreeNode();
+        type->token = token[token_ptr];
+        type->type = TYPE;
+        (*rt)->append_ch(type);
+        token_ptr += 3;
+        while(token_ptr < token.size() && token[token_ptr].first != lex.lexicals.get_lexical_number("}")) {
+            string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first);
+            if (types.find(sym_str) != types.end()) {
+                TreeNode *thisvar;
+                token_ptr += parse_var_declare(token_ptr,&thisvar,NULL);
+                (*rt)->append_ch(thisvar);
+            }
+            else goto err;
+        }
+        return token_ptr - start_pos + 1;
+    err:
+        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+        errors.raise_error(token_pos.first,token_pos.second,"struct declare error.");
+        (*rt)->error = true;
+        return max(1,token_ptr - start_pos);
+    }
     int parse_symbol_declare(int start_pos, TreeNode **rt) {
         // <符号定义> ::= <修饰符> <类型声明>
         // 其中函数定义的识别已经在词法分析阶段检测大括号的方式预处理，因此这里直接使用当时的结果即可避免递归下降法的回溯
@@ -854,15 +907,28 @@ private:
         token_ptr += parse_qualifiers(token_ptr,&qualifiers);
         string sym_str = lex.lexicals.get_lexical_str(token[token_ptr].first); // 检查类型
         if (types.find(sym_str) != types.end()) {
-            if (sym_str == "struct" || sym_str =="union") {
-                assert(false); // 不支持的语法
+            if (sym_str == "struct" || sym_str == "union") {
+                int ptr_checkpoint = token_ptr;
+                token_ptr ++;
+                if (token_ptr < token.size() && token[token_ptr].first == sym_id) {
+                    token_ptr ++;
+                }
+                else {
+                    (*rt) = new TreeNode();
+                    (*rt)->error = true;
+                    return max(1,token_ptr - start_pos);
+                }
+                if (token_ptr < token.size() && lex.lexicals.get_lexical_str(token[token_ptr].first) == "{") {
+                    return parse_struct_declare(ptr_checkpoint,rt);
+                }
+                else {
+                    return parse_var_declare(ptr_checkpoint,rt,qualifiers);
+                }
             }
             else {
                 int ptr_checkpoint = token_ptr;
-                int ptr_cnt = 0;
                 while (token_ptr + 1 < token.size() && token[token_ptr+1].first == lex.symbols.get_symbol_id("*")) {
                     token_ptr ++;
-                    ptr_cnt ++;
                 }
                 if (token_ptr + 1 < token.size() && token[token_ptr+1].first == sym_id && lex.symbols.has_suffix(token[token_ptr+1].second,"func")) {
                     return parse_function_declare(ptr_checkpoint,rt,qualifiers);
@@ -895,12 +961,13 @@ private:
         cur_pri：当前符号的优先级
         cur_as：当前符号的结合性（C语言中相同优先级结合律一定一致），false为左结合，true为右结合
     */
-    void merge_op(TreeNode **rt, TreeNode **lastnode, pair<int,int> token, int last_pri, int cur_pri, bool cur_as) {
+    void merge_op(TreeNode **rt, TreeNode **lastnode, pair<int,int> token, int last_pri, int cur_pri, bool cur_as, int token_ptr) {
         if ((last_pri == cur_pri && cur_as) || last_pri > cur_pri) { // case 1 and case 3
             TreeNode *chnode = new TreeNode();
             swap(**lastnode,*chnode);
             (*lastnode)->fa = chnode->fa;
             (*lastnode)->token = {token.first,cur_pri};
+            (*lastnode)->token_pos = token_ptr;
             (*lastnode)->type = OP;
             (*lastnode)->child.push_back(chnode);
             chnode->fa = *lastnode;
@@ -923,6 +990,7 @@ private:
             pos->fa = chnode;
             chnode->type = OP;
             chnode->token = {token.first,cur_pri};
+            chnode->token_pos = token_ptr;
             chnode->child.push_back(pos);
             *lastnode = chnode;
         }
@@ -949,6 +1017,7 @@ private:
             chnode->fa = pos->fa;
             pos->fa = chnode;
             chnode->type = OP;
+            chnode->token_pos = token_ptr;
             chnode->token = {token.first,cur_pri};
             chnode->child.push_back(pos);
             *lastnode = chnode;
