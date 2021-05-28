@@ -262,6 +262,8 @@ public:
         symbols.insert("void func","put");
         symbols.insert("void func","scanf");
         symbols.insert("void func","printf");
+        symbols.insert("bool","true");
+        symbols.insert("bool","false");
         ops_begin = lexicals.size();
         for (string x : ops) {
             lexicals.insert(x);

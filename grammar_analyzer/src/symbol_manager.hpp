@@ -58,6 +58,15 @@ public:
         }
         return false;
     }
+    bool has_prefix(int id, string prefix) {
+        if (id >= 0 && id < all_symbol.size()) {
+            string tmp = all_symbol[id].first;
+            if (tmp.length() >= prefix.length()) {
+                return tmp.substr(0,prefix.length()) == prefix;
+            }
+        }
+        return false;
+    }
     string get_symbol_str(int id) {
         if (id >= 0 && id < all_symbol.size()) return all_symbol[id].second;
         return "";

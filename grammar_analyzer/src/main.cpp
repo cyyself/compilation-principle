@@ -7,7 +7,7 @@ char buffer[BUFFER_SIZE];
 
 int main() {
 #ifdef DEBUG
-    freopen("../testcase1.c","r",stdin);
+    freopen("../testcase.c","r",stdin);
 #endif
     int ptr = -1;
     do {

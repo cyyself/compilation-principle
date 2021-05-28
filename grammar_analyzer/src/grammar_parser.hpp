@@ -31,13 +31,30 @@ enum TreeNodeType {
 };
 
 enum result_type {
-    DEFAULT_TYPE,
-    INT,
-    BOOL,
-    PTR,
-    STR,
-    CHAR
+    TYPE_DEFAULT,
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_BOOL,
+    TYPE_STR,
+    TYPE_CHAR,
+    TYPE_VOID
 };
+const char* rtype_s(result_type rtype) {
+    switch (rtype) {
+#define str(x) #x
+        case TYPE_DEFAULT: return str(TYPE_DEFAULT);
+        case TYPE_INT: return str(TYPE_INT);
+        case TYPE_FLOAT: return str(TYPE_FLOAT);
+        case TYPE_BOOL: return str(TYPE_BOOL);
+        case TYPE_STR: return str(TYPE_STR);
+        case TYPE_CHAR: return str(TYPE_CHAR);
+        case TYPE_VOID: return str(TYPE_VOID);
+        default:
+            assert(false);
+#undef str
+    }
+}
+
 
 struct TreeNode {
     TreeNode *fa;
@@ -52,7 +69,7 @@ struct TreeNode {
         type = DEFAULT;
         token = {-1,0};
         error = false;
-        rtype = DEFAULT_TYPE;
+        rtype = TYPE_DEFAULT;
         token_pos = -1;
     }
     void append_ch(TreeNode *node) {
@@ -74,6 +91,7 @@ struct TreeNode {
             case SINGLEQUALIFIER: return str(SINGLEQUALIFIER);
             case SINGLETYPEVAR: return str(SINGLETYPEVAR);
             case SINGLEVAR: return str(SINGLEVAR);
+            case TYPEDECLEARES: return str(TYPEDECLEARES);
             case TYPE: return str(TYPE);
             case BLOCK: return str(BLOCK);
             case EXP: return str(EXP);
@@ -127,7 +145,7 @@ public:
                 printf("{\"type\":\"ERROR\"}%s\n",no_last?"":",");
             }
             else {
-                printf("{\"type\":\"%s\",\"token\":[%d,%d],\"lex\":",tr->type_s(),tr->token.first,tr->token.second);
+                printf("{\"type\":\"%s\",\"token\":[%d,%d],\"rtype\":\"%s\",\"lex\":",tr->type_s(),tr->token.first,tr->token.second,rtype_s(tr->rtype));
                 if (tr->token.first != -1) {
                     if (tr->token.first == sym_id) cout << '"' << lex.symbols.get_symbol_str(tr->token.second) << '"';
                     else if (tr->token.first == val_id) cout << lex.values.get_value_str(tr->token.second);
@@ -194,7 +212,11 @@ public:
             parse_codeblock(0,&tr);
             errors.print_err();
             printf("------ GRAMMAR ANALYZED TREE BEGIN -----\n");
+#ifdef DEBUG
+            print_tree(tr);
+#else
             print_simple_tree(tr);
+#endif
             printf("------ GRAMMAR ANALYZED TREE  END  -----\n");
         }
     }
@@ -418,7 +440,71 @@ private:
             }
             else break;
         }
+        dfs_exp(*rt);
         return token_ptr - start_pos;
+    }
+    void dfs_exp(TreeNode *rt) {
+        if (rt && !rt->error) {
+            switch(rt->type) {
+                case OP:
+                    if (rt->child.size() == 2) {
+                        for (auto x:rt->child) dfs_exp(x);
+                        if (rt->child[0] == NULL || rt->child[1] == NULL) {
+                            rt->rtype = (rt->child[0] == NULL) ? rt->child[1]->rtype : rt->child[0]->rtype;
+                        }
+                        else {
+                            if (rt->child[0]->rtype == rt->child[1]->rtype) {
+                                string op_str = lex.lexicals.get_lexical_str(rt->token.second);
+                                if (convert_to_bool_ops.find(op_str) != convert_to_bool_ops.end()) rt->rtype = TYPE_BOOL;
+                                else rt->rtype = rt->child[0]->rtype;
+                            }
+                            else {
+                                pair <int,int> token_pos = lex.get_token_pos(rt->token_pos);
+                                errors.raise_error(token_pos.first,token_pos.second,"value type is not the same.");
+                                rt->error = true;
+                            }
+                        }
+                    }
+                    else {
+                        pair <int,int> token_pos = lex.get_token_pos(rt->token_pos);
+                        errors.raise_error(token_pos.first,token_pos.second,"value is missing");
+                        rt->error = true;
+                    }
+                    break;
+                case FUNCTION_CALL:
+                    rt->rtype = get_symbol_rtype(rt->token.second);
+                    break;
+                case SINGLEVAR:
+                    rt->rtype = get_symbol_rtype(rt->token.second);
+                    break;
+                case VAL:
+                    if (rt->child.size() == 0) {
+                        string value_type = lex.values.get_value_type(rt->token.second);
+                        if (value_type == "int" || value_type == "hex" || value_type == "oct") rt->rtype = TYPE_INT;
+                        else if (value_type == "float") rt->rtype = TYPE_FLOAT;
+                        else if (value_type == "char[]") rt->rtype = TYPE_STR;
+                        else if (value_type == "char") rt->rtype = TYPE_CHAR;
+                        else assert(false);
+                    }
+                    else {
+                        pair <int,int> token_pos = lex.get_token_pos(rt->token_pos);
+                        errors.raise_error(token_pos.first,token_pos.second,"value after value error");
+                        rt->error = true;
+                    }
+                    break;
+                default:
+                    assert(false);
+            }
+        }
+    }
+    result_type get_symbol_rtype(int function_token) {
+        if (lex.symbols.has_prefix(function_token,"int") || lex.symbols.has_prefix(function_token,"long")) return TYPE_INT;
+        else if (lex.symbols.has_prefix(function_token,"bool")) return TYPE_BOOL;
+        else if (lex.symbols.has_prefix(function_token,"char*")) return TYPE_STR;
+        else if (lex.symbols.has_prefix(function_token,"char")) return TYPE_CHAR;
+        else if (lex.symbols.has_prefix(function_token,"float") || lex.symbols.has_prefix(function_token,"double")) return TYPE_FLOAT;
+        else if (lex.symbols.has_prefix(function_token,"void")) return TYPE_VOID;
+        else assert(false);
     }
     /*
     在变量声明前读取修饰符，如const、static等，后续加入到符号表定义中。
@@ -629,12 +715,12 @@ private:
         (*rt)->error = true;
         return max(1,token_ptr - start_pos + 1);
     }
-    int parse_sentense(int start_pos, TreeNode **rt) {
+    int parse_sentense(int start_pos, TreeNode **rt, bool first_block = false) {
         string sym_str = lex.lexicals.get_lexical_str(token[start_pos].first);
         int off = 0;
         if (types.find(sym_str) != types.end() || type_qualifiers.find(sym_str) != type_qualifiers.end()) {
             // 按照类型处理
-            off = parse_symbol_declare(start_pos,rt);
+            off = parse_symbol_declare(start_pos,rt,first_block);
             return off;
         }
         else if (sym_str == "if") {
@@ -674,13 +760,14 @@ private:
         return max(1,off + 1);
     }
     int parse_codeblock(int start_pos, TreeNode **rt) {
+        bool first_codeblock = start_pos == 0;
         int token_ptr = start_pos;
         *rt = new TreeNode();
         (*rt)->type = BLOCK;
         (*rt)->token_pos = start_pos - 1;
         while (token_ptr < token.size() && token[token_ptr].first != lex.lexicals.get_lexical_number("}")) {
             TreeNode *node = NULL;
-            int off = parse_sentense(token_ptr,&node);
+            int off = parse_sentense(token_ptr,&node,first_codeblock);
             if (off == 0) goto err;
             else {
                 token_ptr += off;
@@ -777,6 +864,11 @@ private:
                         token_ptr ++;
                         TreeNode *value = NULL;
                         int off = parse_exp(token_ptr,&value);
+                        if (value && value->rtype != get_symbol_rtype(single_var->token.second)) {
+                            pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+                            errors.raise_error(token_pos.first,token_pos.second,"init value type error.");
+                            (*rt)->error = true;
+                        }
                         token_ptr += off;
                         thisnode->append_ch(value);
                     }
@@ -894,14 +986,17 @@ private:
             }
             else goto err;
         }
-        return token_ptr - start_pos + 1;
+        token_ptr ++;
+        if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number(";")){
+            return token_ptr - start_pos + 1;
+        }
     err:
         pair <int,int> token_pos = lex.get_token_pos(token_ptr);
         errors.raise_error(token_pos.first,token_pos.second,"struct declare error.");
         (*rt)->error = true;
         return max(1,token_ptr - start_pos);
     }
-    int parse_symbol_declare(int start_pos, TreeNode **rt) {
+    int parse_symbol_declare(int start_pos, TreeNode **rt,bool first_block = false) {
         // <符号定义> ::= <修饰符> <类型声明>
         // 其中函数定义的识别已经在词法分析阶段检测大括号的方式预处理，因此这里直接使用当时的结果即可避免递归下降法的回溯
         int token_ptr = start_pos;
@@ -924,7 +1019,7 @@ private:
                     return parse_struct_declare(ptr_checkpoint,rt);
                 }
                 else {
-                    return parse_var_declare(ptr_checkpoint,rt,qualifiers);
+                    return parse_var_declare(ptr_checkpoint,rt,qualifiers,true);
                 }
             }
             else {
@@ -933,6 +1028,10 @@ private:
                     token_ptr ++;
                 }
                 if (token_ptr + 1 < token.size() && token[token_ptr+1].first == sym_id && lex.symbols.has_suffix(token[token_ptr+1].second,"func")) {
+                    if (!first_block) {
+                        pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+                        errors.raise_error(token_pos.first,token_pos.second,"nested function!");
+                    }
                     return parse_function_declare(ptr_checkpoint,rt,qualifiers);
                     // 词法分析阶段识别为了函数，按照函数处理
                 }

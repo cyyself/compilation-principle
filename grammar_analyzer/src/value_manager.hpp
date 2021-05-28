@@ -32,6 +32,10 @@ public:
         if (id >= 0 && id < all_value.size()) return all_value[id].second;
         return "";
     }
+    string get_value_type(int id) {
+        if (id >= 0 && id < all_value.size()) return all_value[id].first;
+        return "";
+    }
 private:
     vector <pair<string,string> > all_value;
     map <string,int> value_id; // 对于value，value一定能对应到type以及id，因此这里只存储value
