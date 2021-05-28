@@ -1,5 +1,3 @@
-#define DEBUG
-
 #include "grammar_parser.hpp"
 
 #define BUFFER_SIZE 128*1024
@@ -8,7 +6,9 @@
 char buffer[BUFFER_SIZE];
 
 int main() {
-    //freopen("../testcase1.c","r",stdin);
+#ifdef DEBUG
+    freopen("../testcase1.c","r",stdin);
+#endif
     int ptr = -1;
     do {
         ptr ++;
