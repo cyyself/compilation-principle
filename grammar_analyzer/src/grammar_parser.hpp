@@ -277,7 +277,9 @@ private:
                     token_ptr ++;
                 }
                 else {
-                    assert(false);
+                    pair <int,int> token_pos = lex.get_token_pos(token_ptr);
+                    errors.raise_error(token_pos.first,token_pos.second,"right bracket is missing.");
+                    return max(token_ptr - start_pos,1);
                 }
                 if (lastnode == NULL) *rt = lastnode = node;
                 else {
@@ -974,9 +976,9 @@ private:
         }
         else if (last_pri == cur_pri) { // case 2
             TreeNode *pos = *lastnode;
-            while (pos->fa && (pos->fa->type != OP || pos->fa->token.second == cur_pri)) pos = pos->fa;
+            while (pos && pos->fa && (pos->fa->type != OP || pos->fa->token.second == cur_pri)) pos = pos->fa;
             TreeNode *chnode = new TreeNode();
-            if (pos->fa) {
+            if (pos && pos->fa) {
                 bool flag = false;
                 for (auto &x : pos->fa->child) if (x == pos) {
                     x = chnode;
@@ -986,8 +988,8 @@ private:
                 assert(flag); // debug
             }
             else *rt = chnode;
-            chnode->fa = pos->fa;
-            pos->fa = chnode;
+            chnode->fa = pos?pos->fa:NULL;
+            if (pos) pos->fa = chnode;
             chnode->type = OP;
             chnode->token = {token.first,cur_pri};
             chnode->token_pos = token_ptr;
@@ -996,15 +998,15 @@ private:
         }
         else { // case 4 (结合代码一样因此后续合并了）
             TreeNode *pos = *lastnode;
-            while (pos->fa && (pos->fa->type != OP || pos->fa->token.second < cur_pri) ) pos = pos->fa;
-            if (pos->fa && pos->fa->token.second == cur_pri) { // case 4.1
+            while (pos && pos->fa && (pos->fa->type != OP || pos->fa->token.second < cur_pri) ) pos = pos->fa;
+            if (pos && pos->fa && pos->fa->token.second == cur_pri) { // case 4.1
                 // 如果左结合则继续往上走
                 if (!cur_as) 
-                    while (pos->fa && (pos->fa->type == OP && pos->fa->token.second == cur_pri) )
+                    while (pos && pos->fa && (pos->fa->type == OP && pos->fa->token.second == cur_pri) )
                         pos = pos->fa;
             }
             TreeNode *chnode = new TreeNode();
-            if (pos->fa) {
+            if (pos && pos->fa) {
                 bool flag = false;
                 for (auto &x : pos->fa->child) if (x == pos) {
                     x = chnode;
@@ -1014,8 +1016,8 @@ private:
                 assert(flag); // debug
             }
             else *rt = chnode;
-            chnode->fa = pos->fa;
-            pos->fa = chnode;
+            chnode->fa = pos?pos->fa:NULL;
+            if (pos) pos->fa = chnode;
             chnode->type = OP;
             chnode->token_pos = token_ptr;
             chnode->token = {token.first,cur_pri};
