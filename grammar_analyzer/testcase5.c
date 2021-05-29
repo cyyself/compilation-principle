@@ -1,3 +1,6 @@
+struct DATA {
+    int x,y;
+};
 int main () {
     int c,d;
     c=d=1*2+3*4;

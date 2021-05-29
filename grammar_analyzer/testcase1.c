@@ -7,15 +7,16 @@ int main() {
     a = b + 1;
     int c = 2;
     b = b + b;
+    bool temp,temp1,temp2;
     {
-        a = (b == c);
-        a = (b > c);
-        a = (b < c);
+        temp = (b == c);
+        temp = (b > c);
+        temp = (b < c);
     }
     {
-        a = (b && c);
-        a = (b || c);
-        a = (!b);
+        temp = (temp1 && temp2);
+        temp = (temp1 || temp2);
+        temp = (!temp);
     }
     if (a == b) {
         while (a == b) {
