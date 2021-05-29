@@ -115,7 +115,6 @@ public:
         errors.init_lines(_buffer);
         buffer = _buffer;
         token = lex.parse_lexical(buffer);
-        lex.print_result();
         if (token.size()) {
             sym_id = lex.lexicals.get_lexical_number("sym");
             val_id = lex.lexicals.get_lexical_number("val");
@@ -211,6 +210,7 @@ public:
             TreeNode *tr = NULL;
             parse_codeblock(0,&tr);
             errors.print_err();
+            lex.print_result();
             printf("------ GRAMMAR ANALYZED TREE BEGIN -----\n");
 #ifdef DEBUG
             print_tree(tr);
@@ -988,6 +988,7 @@ private:
         }
         token_ptr ++;
         if (token_ptr < token.size() && token[token_ptr].first == lex.lexicals.get_lexical_number(";")){
+            parse_struct(*rt,(*rt)->token.second);
             return token_ptr - start_pos + 1;
         }
     err:
@@ -995,6 +996,18 @@ private:
         errors.raise_error(token_pos.first,token_pos.second,"struct declare error.");
         (*rt)->error = true;
         return max(1,token_ptr - start_pos);
+    }
+    void parse_struct(TreeNode *tr,int struct_id) {
+        if (tr) {
+            if (tr->type == SINGLETYPEVAR) {
+                if (tr->child.size() >= 3) {
+                    lex.symbols.add_to_struct(tr->child[2]->token.second,struct_id);
+                }
+            }
+            else {
+                for (auto x:tr->child) parse_struct(x,struct_id);
+            }
+        }
     }
     int parse_symbol_declare(int start_pos, TreeNode **rt,bool first_block = false) {
         // <符号定义> ::= <修饰符> <类型声明>

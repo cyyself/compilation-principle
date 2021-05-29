@@ -20,10 +20,10 @@ public:
     }
     void print_all() {
         printf("----- Symbol Table BEGIN -----\n");
-        printf("|No.|     Type     | Symbol \n");
+        printf("|No.|     Type     |field|Symbol \n");
         printf("------------------------------\n");
         for (int i=0;i<all_symbol.size();i++) {
-            printf("|%03d|%*s|%s\n",i,14,all_symbol[i].first.c_str(),all_symbol[i].second.c_str());
+            printf("|%03d|%*s|%*d|%s\n",i,14,all_symbol[i].first.c_str(),5,get_symbol_struct(i),all_symbol[i].second.c_str());
         }
         printf("----- Symbol Table  END  -----\n");
     }
@@ -71,7 +71,17 @@ public:
         if (id >= 0 && id < all_symbol.size()) return all_symbol[id].second;
         return "";
     }
+    void add_to_struct(int id,int struct_id) {
+        belong_to_struct[id] = struct_id;
+    }
+    int get_symbol_struct(int id) {
+        if (belong_to_struct.find(id) != belong_to_struct.end()) {
+            return belong_to_struct[id];
+        }
+        else return -1;
+    }
 private:
     vector <pair <string,string> > all_symbol;//存储类型和名称，方便后续进行判断
+    map <int,int> belong_to_struct; // 这个符号所属的struct
     map <string,int> symbol_id;//symbol_id只存储名称，便于反查类型
 };
