@@ -35,6 +35,12 @@ std::set <std::string> convert_to_bool_ops = std::set <std::string>({
     "==","!=","<",">",">=","<=",
 });
 
+std::set <std::string> arithmetic_ops = std::set <std::string>({
+    "+","-","*","/","<<",">>","++",
+    "--","+=","-=","*=","/=","<<=",
+    ">>=","%","%="
+});
+
 
 std::set <char> control_ops = std::set<char> ({
     ',',';'

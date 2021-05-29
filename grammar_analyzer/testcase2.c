@@ -1,6 +1,7 @@
+struct DATA {
+    int a,b;
+};
 int main() {
-    int a,b,c,d;
-    a = b = c = d = 1?0:1;
-    a = b + c + d;
+    int x,y;
     return 0;
 }

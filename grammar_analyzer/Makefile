@@ -34,8 +34,14 @@ test5: grammar_analyzer testcase5.c plot.py
 	@python3 plot.py < tmp.txt
 
 test6: grammar_analyzer testcase6.c plot.py
-	@echo "Testing Testcase5.c"
+	@echo "Testing Testcase6.c"
 	@./grammar_analyzer < testcase6.c > tmp.txt
+	@cat tmp.txt
+	@python3 plot.py < tmp.txt
+
+test7: grammar_analyzer testcase7.c plot.py
+	@echo "Testing Testcase7.c"
+	@./grammar_analyzer < testcase7.c > tmp.txt
 	@cat tmp.txt
 	@python3 plot.py < tmp.txt
 

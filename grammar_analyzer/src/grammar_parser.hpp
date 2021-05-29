@@ -447,38 +447,45 @@ private:
     void dfs_exp(TreeNode *rt) {
         if (rt && !rt->error) {
             switch(rt->type) {
-                case OP:
-                    if (rt->child.size() == 2) {
+                case OP:// 如果该节点是符号
+                    if (rt->child.size() == 2) { // 判断子节点是否缺失，也就是操作数是否齐全
                         for (auto x:rt->child) dfs_exp(x);
-                        if (rt->child[0] == NULL || rt->child[1] == NULL) {
+                        if (rt->child[0] == NULL || rt->child[1] == NULL) { // 对于单目运算符特殊处理
                             rt->rtype = (rt->child[0] == NULL) ? rt->child[1]->rtype : rt->child[0]->rtype;
                         }
-                        else {
+                        else { // 对于双目运算符，需要检查两个操作数类型
                             if (rt->child[0]->rtype == rt->child[1]->rtype) {
                                 string op_str = lex.lexicals.get_lexical_str(rt->token.first);
+                                // 提供了一个bool运算符表，如果运算结果会转换为bool，那么就将这个节点的数值类型改为bool
                                 if (convert_to_bool_ops.find(op_str) != convert_to_bool_ops.end()) rt->rtype = TYPE_BOOL;
-                                else rt->rtype = rt->child[0]->rtype;
+                                else if (rt->child[0]->rtype == TYPE_BOOL && arithmetic_ops.find(op_str) != arithmetic_ops.end()) {
+                                    // bool运算符不能参与算术运算，因此报错
+                                    pair <int,int> token_pos = lex.get_token_pos(rt->token_pos);
+                                    errors.raise_error(token_pos.first,token_pos.second,"bool value can't be operate by arithmetics.");
+                                    rt->error = true;
+                                }
+                                else rt->rtype = rt->child[0]->rtype; // 使用其子节点的类型
                             }
-                            else {
+                            else { // 操作数类型不一致报错
                                 pair <int,int> token_pos = lex.get_token_pos(rt->token_pos);
                                 errors.raise_error(token_pos.first,token_pos.second,"value type is not the same.");
                                 rt->error = true;
                             }
                         }
                     }
-                    else {
+                    else { // 子节点缺失，报错
                         pair <int,int> token_pos = lex.get_token_pos(rt->token_pos);
                         errors.raise_error(token_pos.first,token_pos.second,"value is missing");
                         rt->error = true;
                     }
                     break;
-                case FUNCTION_CALL:
+                case FUNCTION_CALL: // 如果该节点是函数调用，通过一个其他函数获得类型
                     rt->rtype = get_symbol_rtype(rt->token.second);
                     break;
-                case SINGLEVAR:
+                case SINGLEVAR: // 如果该节点是单变量的调用，通过一个其他函数获得类型
                     rt->rtype = get_symbol_rtype(rt->token.second);
                     break;
-                case VAL:
+                case VAL: // 如果该节点是一个常量，设置类型
                     if (rt->child.size() == 0) {
                         string value_type = lex.values.get_value_type(rt->token.second);
                         if (value_type == "int" || value_type == "hex" || value_type == "oct") rt->rtype = TYPE_INT;

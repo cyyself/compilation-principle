@@ -1,12 +1,9 @@
-struct DATA {
-    int x,y;
-};
-int main () {
-    int c,d;
-    c=d=1*2+3*4;
-    bool eq = c == d;
-    int e = eq;
-    int f;
-    f = c == d;
+int main() {
+    int add(int a,int b) {
+        return a+b;
+    }
+    int x = 2018;
+    int y = 4309;
+    bool z = add(x,y);
     return 0;
 }
