@@ -447,7 +447,7 @@ private:
     void dfs_exp(TreeNode *rt) {
         if (rt && !rt->error) {
             switch(rt->type) {
-                case OP:// 如果该节点是符号
+                case OP:// 如果该节点是运算符
                     if (rt->child.size() == 2) { // 判断子节点是否缺失，也就是操作数是否齐全
                         for (auto x:rt->child) dfs_exp(x);
                         if (rt->child[0] == NULL || rt->child[1] == NULL) { // 对于单目运算符特殊处理
