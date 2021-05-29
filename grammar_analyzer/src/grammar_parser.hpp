@@ -219,6 +219,7 @@ public:
 #endif
             printf("------ GRAMMAR ANALYZED TREE  END  -----\n");
         }
+        else lex.print_result();
     }
 private:
     error_manager errors;
