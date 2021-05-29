@@ -455,7 +455,7 @@ private:
                         }
                         else {
                             if (rt->child[0]->rtype == rt->child[1]->rtype) {
-                                string op_str = lex.lexicals.get_lexical_str(rt->token.second);
+                                string op_str = lex.lexicals.get_lexical_str(rt->token.first);
                                 if (convert_to_bool_ops.find(op_str) != convert_to_bool_ops.end()) rt->rtype = TYPE_BOOL;
                                 else rt->rtype = rt->child[0]->rtype;
                             }
