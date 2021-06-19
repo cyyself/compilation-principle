@@ -18,6 +18,7 @@ int main() {
     buffer[ptr] = 0; // replace EOF to 0
     compiler comp(buffer);
     comp.compile();
+    comp.output_four_tuple();
     comp.output_mips();
 	return 0;
 }

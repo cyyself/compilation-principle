@@ -205,7 +205,7 @@ public:
             printf("{\"NULL\":[]}%s\n",no_last?"":",");
         }
     }
-    void parse() {
+    TreeNode* parse() {
         if (!lex.errors.has_error()) {
             TreeNode *tr = NULL;
             parse_codeblock(0,&tr);
@@ -218,8 +218,10 @@ public:
             print_simple_tree(tr);
 #endif
             printf("------ GRAMMAR ANALYZED TREE  END  -----\n");
+            return tr;
         }
         else lex.print_result();
+        return NULL;
     }
 //private:
     error_manager errors;

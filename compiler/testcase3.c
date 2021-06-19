@@ -1,14 +1,19 @@
 int fibo(int x) {
-    if (x == 1) {
-        return 1;
+    int a,b,t;
+    a = 1;
+    b = 1;
+    while (x) {
+        t = a + b;
+        a = b;
+        b = t;
+        x = x - 1;
     }
-    else {
-        return fibo(x-1) + fibo(x-2);
-    }
+    return a;
 }
 int main() {
-    int input;
-    get(input);
-    put(fibo(input));
+    int f;
+    get(f);
+    f = fibo(f);
+    put(f);
     return 0;
 }

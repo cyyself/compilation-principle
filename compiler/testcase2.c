@@ -9,15 +9,15 @@ int main() {
         if(op==1)
         {
             out = num1;
-        };
+        }
         if(op==2)
         {
             out = num2;
-        };
+        }
         if(op==3)
         {
             out = num3;
-        };
+        }
         put(out);
         get(op);
     }
