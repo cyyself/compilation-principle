@@ -30,8 +30,6 @@ test4: compiler testcase4.c plot.py
 test5: compiler testcase5.c plot.py
 	@echo "Testing Testcase5.c"
 	@./compiler < testcase5.c > tmp.txt
-	@cat tmp.txt
-	@python3 plot.py < tmp.txt
 
 clean:
 	rm compiler
