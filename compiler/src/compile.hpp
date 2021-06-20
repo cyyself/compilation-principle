@@ -482,5 +482,5 @@ private:
     // 存储空间规划方案：在offset($gp)依次放入所有的常量与变量
     int const_cnt = 0;
     int const_size = 0;
-    map <string,string> gp_map;
+    map <string,string> gp_map; // 中间代码与MIPS互转查找
 };
