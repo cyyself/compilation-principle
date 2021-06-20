@@ -1,5 +1,5 @@
 int fibo(int x) {
-    int a,b,t;
+    int b,t,a;
     a = 1;
     b = 1;
     while (x) {
@@ -11,9 +11,11 @@ int fibo(int x) {
     return a;
 }
 int main() {
-    int f;
-    get(f);
-    f = fibo(f);
-    put(f);
+    while (1) {
+        int i;
+        get(i);
+        int f = fibo(i);
+        put(f);
+    }
     return 0;
 }

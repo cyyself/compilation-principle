@@ -297,6 +297,20 @@ public:
                             "$v0"
                         );
                         middle_code.emplace_back("syscall");
+                        // 输出换行符
+                        middle_code.emplace_back(
+                            "li",
+                            "10",
+                            "",
+                            "$a0"
+                        );
+                        middle_code.emplace_back(
+                            "li",
+                            "11",
+                            "",
+                            "$v0"
+                        );
+                        middle_code.emplace_back("syscall");
                     }
                 }
             }
@@ -343,12 +357,7 @@ public:
         }
         else if (tr->type == SINGLETYPEVAR) {
             if (tr->child.size() == 4) { // 赋初始值
-                middle_code.emplace_back(
-                    "lw",
-                    string(myitoa(4 * tr->child[3]->token.second)) + string("($gp)"),
-                    "",
-                    string("$t") + string(myitoa(t_reg))
-                );
+                exp_translate(tr->child[3],t_reg);
                 middle_code.emplace_back(
                     "sw",
                     string(myitoa(4 * (const_cnt + tr->child[2]->token.second))) + string("($gp)"),
