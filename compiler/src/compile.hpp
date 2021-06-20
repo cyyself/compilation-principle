@@ -48,6 +48,7 @@ public:
     }
     void compile() {
         TreeNode* treeRT = parser->parse();
+        if (treeRT == NULL) return;
         // 首先使用li和sw将常量载入内存
         for (auto x : values->all_value) {
             if (x.first == "int" || x.first == "oct" || x.first == "hex") {
@@ -265,51 +266,21 @@ public:
             if (function_name == "get" || function_name == "put") {
                 for (auto ch : tr->child) {
                     if (function_name == "get") {
-                        middle_code.emplace_back(
-                            "li",
-                            "5",
-                            "",
-                            "$v0"
-                        );
+                        middle_code.emplace_back("li","5","","$v0");
                         middle_code.emplace_back("syscall");
                         if (ch->type == SINGLEVAR) { // 存储得到的值
-                            middle_code.emplace_back(
-                                "sw",
-                                string(myitoa(4 * (const_cnt + ch->token.second))) + string("($gp)"),
-                                "",
-                                string("$v0")
-                            );
+                            middle_code.emplace_back("sw",string(myitoa(4 * (const_cnt + ch->token.second))) + string("($gp)"),"",string("$v0"));
                         }
                         else assert(false);
                     }
                     else { // put
                         exp_translate(ch,t_reg);
-                        middle_code.emplace_back(
-                            "move",
-                            string("$t") + string(myitoa(t_reg)),
-                            "",
-                            "$a0"
-                        );
-                        middle_code.emplace_back(
-                            "li",
-                            "1",
-                            "",
-                            "$v0"
-                        );
+                        middle_code.emplace_back("move",string("$t") + string(myitoa(t_reg)),"","$a0");
+                        middle_code.emplace_back("li","1","","$v0");
                         middle_code.emplace_back("syscall");
                         // 输出换行符
-                        middle_code.emplace_back(
-                            "li",
-                            "10",
-                            "",
-                            "$a0"
-                        );
-                        middle_code.emplace_back(
-                            "li",
-                            "11",
-                            "",
-                            "$v0"
-                        );
+                        middle_code.emplace_back("li","10","","$a0");
+                        middle_code.emplace_back("li","11","","$v0");
                         middle_code.emplace_back("syscall");
                     }
                 }
