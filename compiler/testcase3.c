@@ -11,11 +11,12 @@ int fibo(int x) {
     return a;
 }
 int main() {
-    while (1) {
-        int i;
-        get(i);
-        int f = fibo(i);
-        put(f);
+    int n;
+    get(n);
+    int i = 1;
+    while (i <= n) {
+        put(fibo(i));
+        i = i + 1;
     }
     return 0;
 }
